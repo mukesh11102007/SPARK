@@ -56,9 +56,14 @@ export class ErrorBoundary extends Component {
     if (this.state.hasError) {
       return (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--vscode-bg)', color: 'var(--vscode-text)', height: '100vh' }}>
-          <div style={{ border: '1px solid #f14c4c', background: 'var(--vscode-sidebar)', padding: '2rem', borderRadius: '6px', maxWidth: '500px', textAlign: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
-            <h2 style={{ color: '#f14c4c', marginBottom: '1rem' }}>⚠️ Runtime Error Detected</h2>
-            <p style={{ opacity: 0.8, marginBottom: '1.5rem', fontSize: '0.9rem' }}>The Watchdog automation is attempting to patch this issue and has sent an alert to your webhook.</p>
+          <div style={{ border: '1px solid #f14c4c', background: 'var(--vscode-sidebar)', padding: '2rem', borderRadius: '6px', maxWidth: '600px', textAlign: 'left', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ color: '#f14c4c', marginBottom: '1rem' }}>⚠️ REAL React Crash in IDE</h2>
+            <p style={{ opacity: 0.8, marginBottom: '1rem', fontSize: '0.9rem' }}>
+              SPARK Studio itself has crashed. This is an actual bug in the IDE codebase.
+            </p>
+            <pre style={{ background: '#000', padding: '1rem', color: '#ff7b72', overflowX: 'auto', fontSize: '0.8rem', marginBottom: '1rem' }}>
+              {this.state.error?.toString()}
+            </pre>
             <button className="ide-btn" onClick={() => window.location.reload()}>
               Reload Application
             </button>
