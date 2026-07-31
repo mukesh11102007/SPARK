@@ -27,7 +27,11 @@ const COLORS = ['#ff7b72','#79c0ff','#d2a8ff','#56d364','#ffa657','#f78166','#58
 export const getOrCreateUserIdentity = () => {
   let identity = null;
   try { identity = JSON.parse(localStorage.getItem('spark_identity')); } catch {}
-  if (!identity || !identity.name) return null;
+  if (!identity || !identity.name) {
+    const defaultIdentity = { name: 'Guest Developer', initials: 'GD', color: '#58a6ff', id: 'guest-' + Math.random().toString(36).substring(2, 9) };
+    try { localStorage.setItem('spark_identity', JSON.stringify(defaultIdentity)); } catch {}
+    return defaultIdentity;
+  }
   return identity;
 };
 
@@ -100,23 +104,71 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
 };
 
 // ── Broadcast generated code to all workspace members ────────────────────────
-export const broadcastCodeGenerated = async (workspaceId, generatedFiles) => {
-  if (!presenceChannel) return;
-  await presenceChannel.send({
-    type: 'broadcast',
-    event: 'code_generated',
-    payload: { generatedFiles, timestamp: Date.now() },
-  });
+export const broadcastCodeGenerated = async (workspaceId, files) => {
+  if (presenceChannel) {
+    presenceChannel.send({
+      type: 'broadcast',
+      event: 'code_generated',
+      payload: { generatedFiles: files },
+    });
+  }
+  
+  // Persist to logs table so late joiners can fetch it
+  try {
+    const identity = getOrCreateUserIdentity();
+    const payload = {
+      workspace_id: workspaceId,
+      files,
+      timestamp: Date.now(),
+      author: identity?.name || 'Unknown'
+    };
+    await supabase.from('logs').insert([{ 
+      // Depending on the logs table schema, we try to store it in a generic way
+      workspace_id: workspaceId,
+      payload: payload
+    }]);
+  } catch (e) {
+    console.error('Failed to persist to logs table', e);
+  }
+};
+
+// ── Fetch past files from logs ────────────────────────────────────────────────
+export const fetchWorkspaceFiles = async (workspaceId) => {
+  try {
+    const { data, error } = await supabase
+      .from('logs')
+      .select('payload')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false })
+      .limit(10);
+      
+    if (error) throw error;
+    
+    if (data && data.length > 0) {
+      // Merge all files from latest payloads
+      const allFiles = {};
+      data.reverse().forEach(row => {
+        if (row.payload && row.payload.files) {
+          Object.assign(allFiles, row.payload.files);
+        }
+      });
+      return allFiles;
+    }
+  } catch (e) {
+    console.warn('Failed to fetch from logs table. Table might not exist or schema mismatch.', e);
+  }
+  return null;
 };
 
 // ── Real-time canvas sync ─────────────────────────────────────────────────────
-export const broadcastCanvasUpdate = async (workspaceId, nodes) => {
-  if (!presenceChannel) return;
-  await presenceChannel.send({
-    type: 'broadcast',
-    event: 'canvas_update',
-    payload: { nodes, timestamp: Date.now() },
-  });
+export const broadcastCanvasUpdate = (nodes) => {
+  if (presenceChannel) {
+    presenceChannel.send({
+      type: 'broadcast',
+      event: 'canvas_update',
+      payload: { nodes },
+    });
+  }
 };
 
 // ── Legacy exports (keep CanvasEditor compatible) ─────────────────────────────

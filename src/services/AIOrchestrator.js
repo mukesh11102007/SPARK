@@ -1,7 +1,30 @@
 import { GoogleGenAI } from '@google/genai';
 
 const WEBHOOK_URL = 'https://api.agents.snsihub.ai/webhook-test/Db';
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+const keys = [
+  import.meta.env.VITE_GEMINI_API_KEY || '',
+  import.meta.env.VITE_GEMINI_API_KEY_2 || ''
+].filter(Boolean);
+
+let currentKeyIndex = 0;
+const getAiClient = () => {
+  if (keys.length === 0) throw new Error("No Gemini API keys configured");
+  return new GoogleGenAI({ apiKey: keys[currentKeyIndex] });
+};
+
+const executeWithRoundRobin = async (operation) => {
+  let attempts = 0;
+  while (attempts < keys.length) {
+    try {
+      return await operation(getAiClient());
+    } catch (e) {
+      console.warn(`[AIOrchestrator] Key ${currentKeyIndex} failed. Trying next...`, e);
+      currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+      attempts++;
+    }
+  }
+  throw new Error("All Gemini API keys failed or rate limited.");
+};
 
 // ── Extract React code from any response format ─────────────────────────────
 const extractCode = (raw, projectName) => {
@@ -37,30 +60,75 @@ const extractCode = (raw, projectName) => {
   // Treat as raw code
   const clean = text.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
   if (clean.length > 30 && (clean.includes('import') || clean.includes('export') || clean.includes('function') || clean.includes('const '))) {
-    return { [`${projectName.replace(/\s+/g, '')}App.jsx`]: clean };
+    const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
+    let fileName;
+    if (match && match[1]) {
+      fileName = `${match[1]}.jsx`;
+    } else {
+      let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
+      if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
+      fileName = `${safeName}Component.jsx`;
+    }
+    return { [fileName]: clean };
   }
 
   return null;
 };
 
+// ── Supabase Prompt Helper ───────────────────────────────────────────────────
+const getDbPrompt = (dbConfig) => {
+  if (!dbConfig || dbConfig.status !== 'active') return '';
+  return `
+[SUPABASE DATABASE INTEGRATION REQUIRED]
+The user has provisioned a real Supabase database. You MUST write this component to interact with it!
+- Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
+- Initialize the client OUTSIDE the component: 
+  \`const supabase = window.supabase.createClient('${dbConfig.url}', '${dbConfig.anonKey}');\`
+- Use the table name: '${dbConfig.table}'
+- Write fully functional CRUD logic (fetch in useEffect, insert, update, delete).
+- Assume the table has standard columns (id, created_at) and any other columns your app needs (Supabase will auto-create them or just assume they exist for this demo).
+- The UI MUST reflect real data fetched from this Supabase table.
+`;
+};
+
 // ── Gemini fallback ─────────────────────────────────────────────────────────
-const generateWithGemini = async (prompt, projectName) => {
+const generateWithGemini = async (prompt, projectName, dbConfig) => {
   console.log('[AIOrchestrator] Falling back to Gemini API...');
-  const resp = await ai.models.generateContent({
+  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: `You are an expert React developer. Generate a single complete React component for the following request. 
-Return ONLY the raw JSX/React code. Do not include markdown, no \`\`\`, no explanation.
+    contents: `You are an expert React developer. Generate a single, complete, self-contained React component for the following request.
+
+CRITICAL RULES — MUST FOLLOW:
+1. Return ONLY raw JSX/React code. No markdown, no backticks, no explanation.
+2. The ONLY allowed import is: import React, { useState, useEffect, useRef } from 'react';
+3. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
+4. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes like fa-home, fa-user, fa-cog).
+5. Use ONLY inline styles (style={{}}). No external CSS, no Tailwind classes.
+6. The component MUST have: export default function ComponentName() { ... }
+7. No TypeScript. No JSX fragments as the top-level export. Always return a single root <div>.
+8. Code must be completely free of syntax errors, undefined variables, and runtime errors.
+9. The component must be fully functional with sample/demo data included inline.
 
 Project name: ${projectName}
-Request: ${prompt}`,
-  });
+User request: ${prompt}
+${getDbPrompt(dbConfig)}`,
+  }));
   const raw = resp.text || '';
-  const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
-  return { [`${projectName.replace(/\s+/g, '')}App.jsx`]: clean };
+  const clean = raw.replace(/\`\`\`jsx?/gi, '').replace(/\`\`\`/g, '').trim();
+  const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
+  let fileName;
+  if (match && match[1]) {
+    fileName = `${match[1]}.jsx`;
+  } else {
+    let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
+    if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
+    fileName = `${safeName}Component.jsx`;
+  }
+  return { [fileName]: clean };
 };
 
 // ── Main export ─────────────────────────────────────────────────────────────
-export const generateAppFromVoice = async (prompt, projectName = 'MyProject') => {
+export const generateAppFromVoice = async (prompt, projectName = 'MyProject', dbConfig = null) => {
   console.log('[AIOrchestrator] Generating for:', { prompt, projectName });
 
   // 2-minute timeout on webhook
@@ -71,14 +139,14 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject') =>
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, projectName }),
+      body: JSON.stringify({ prompt, projectName, dbConfig }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
 
     if (!response.ok) {
       console.warn('[AIOrchestrator] Webhook failed, falling back to Gemini...');
-      return await generateWithGemini(prompt, projectName);
+      return await generateWithGemini(prompt, projectName, dbConfig);
     }
 
     const rawText = await response.text();
@@ -89,40 +157,57 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject') =>
 
     // Webhook returned empty/metadata — fall back to Gemini
     console.warn('[AIOrchestrator] Webhook returned no code. Falling back to Gemini...');
-    return await generateWithGemini(prompt, projectName);
+    return await generateWithGemini(prompt, projectName, dbConfig);
 
   } catch (e) {
     clearTimeout(timeout);
     if (e.name === 'AbortError') {
       console.warn('[AIOrchestrator] Webhook timed out. Falling back to Gemini...');
-      return await generateWithGemini(prompt, projectName);
+      return await generateWithGemini(prompt, projectName, dbConfig);
     }
     throw e;
   }
 };
 
 // ── Refine existing code via Gemini ──────────────────────────────────────────
-export const refineAppCode = async (existingCode, problemStatement, projectName, filename) => {
+export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null) => {
   console.log('[AIOrchestrator] Refining code with Gemini...');
-  const resp = await ai.models.generateContent({
+  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: `You are an expert React developer. 
-The user generated a React component, but wants to improve it to perfectly match their problem statement.
+    contents: `You are an expert React developer.
+The user wants to improve an existing React component.
+
+CRITICAL RULES — MUST FOLLOW:
+1. Return ONLY raw JSX/React code. No markdown, no backticks, no explanation.
+2. The ONLY allowed import is: import React, { useState, useEffect, useRef } from 'react';
+3. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
+4. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes).
+5. Use ONLY inline styles (style={{}}). No external CSS files, no Tailwind classes.
+6. The component MUST have: export default function ComponentName() { ... }
+7. Fix ALL existing syntax errors or undefined variables in the code.
+8. The component must be fully functional with sample data if needed.
 
 Project name: ${projectName}
-Problem Statement / Refinement Request: ${problemStatement}
+Refinement Request: ${problemStatement}
 
 Current Code:
 \`\`\`jsx
 ${existingCode}
 \`\`\`
 
-Return ONLY the completely updated and refined raw JSX/React code. Do not include markdown, no \`\`\`, no explanation. It must be a complete drop-in replacement.`,
-  });
+${getDbPrompt(dbConfig)}
+
+Remember: ONLY return the raw code.`
+  }));
   
   const raw = resp.text || '';
   const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
-  const outName = filename || `${projectName.replace(/\s+/g, '')}App.jsx`;
+  let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
+  if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
+  
+  // If a filename was passed, sanitize it just in case it came from an old broken generation
+  const safeFilename = filename ? filename.replace(/[^a-zA-Z0-9.]/g, '') : null;
+  const outName = safeFilename || `${safeName}Component.jsx`;
   return { [outName]: clean };
 };
 
@@ -133,9 +218,9 @@ export const reviewAndFixCode = async (files, originalPrompt, projectName) => {
 
   const [filename, code] = firstFile;
 
-  const resp = await ai.models.generateContent({
+  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
     model: 'gemini-2.5-flash',
-    contents: `You are a senior React code reviewer.
+    contents: `You are a senior React code reviewer and fixer.
 
 Original user request: "${originalPrompt}"
 Project name: "${projectName}"
@@ -148,15 +233,18 @@ ${code}
 Your job:
 1. Check if the code matches the user's request.
 2. Check for any syntax errors, missing imports, undefined variables.
-3. Check that the component is self-contained and doesn't rely on external CSS files (use inline styles).
-4. If there are problems, fix ALL of them and return corrected code.
-5. Always return a JSON object in this exact format:
+3. CRITICAL: Remove ALL imports from lucide-react, @heroicons, react-icons, or any third-party library. Replace icon usage with <i className="fa fa-iconname" /> (Font Awesome) HTML elements.
+4. CRITICAL: The ONLY allowed import is: import React, { useState, useEffect, useRef } from 'react';
+5. Ensure ALL styles are inline (style={{}}). Remove any CSS class references to external stylesheets.
+6. Verify that the default export exists as: export default function ComponentName() { ... }
+7. Fix ALL problems and return corrected code.
+8. Return a JSON object in this EXACT format:
 {
   "status": "ok" | "fixed",
   "issues": ["list of issues found, or empty array"],
-  "code": "THE COMPLETE FIXED OR ORIGINAL JSX CODE HERE (no markdown, no backticks)"
+  "code": "THE COMPLETE FIXED JSX CODE HERE (no markdown, no backticks)"
 }`,
-  });
+  }));
 
   try {
     const text = (resp.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
@@ -173,4 +261,31 @@ Your job:
     // If JSON parse fails, return original code with no review
     return { files, review: null };
   }
+};
+
+// ── Auto-Heal: Fix code based on error logs ───────────────────────────────────
+export const autoHealCode = async (files, errorLog) => {
+  const firstFile = Object.entries(files)[0];
+  if (!firstFile) return files;
+  const [filename, code] = firstFile;
+
+  console.log('[AIOrchestrator] Auto-healing code...');
+  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
+    model: 'gemini-2.5-flash',
+    contents: `You are an expert React debugger. The following React component crashed.
+
+Error Log:
+${errorLog}
+
+Component Code:
+\`\`\`jsx
+${code}
+\`\`\`
+
+Fix the code to resolve the error. Return ONLY the complete corrected raw JSX/React code. Do not include markdown, no \`\`\`, no explanation.`
+  }));
+
+  const raw = resp.text || '';
+  const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+  return { [filename]: clean };
 };

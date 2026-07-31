@@ -3,23 +3,27 @@ import { AutomationProvider, useAutomation } from './contexts/AutomationContext'
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CanvasEditor } from './components/CanvasEditor';
 import { bootWebContainer } from './services/WebContainerService';
-import { generateAppFromVoice, refineAppCode, reviewAndFixCode } from './services/AIOrchestrator';
+import { generateAppFromVoice, refineAppCode, reviewAndFixCode, autoHealCode } from './services/AIOrchestrator';
 import { CodeReviewPanel } from './components/CodeReviewPanel';
 import { UserIdentityModal } from './components/UserIdentityModal';
 import {
   getOrCreateUserIdentity, getOrCreateWorkspaceId, getWorkspaceInviteUrl,
-  joinWorkspacePresence, broadcastCodeGenerated,
+  joinWorkspacePresence, broadcastCodeGenerated, fetchWorkspaceFiles
 } from './services/SupabaseService';
+import { provisionUserDatabase, fetchWorkspaceDatabase } from './services/DatabaseService';
+import sdk from '@stackblitz/sdk';
+import { FastPreviewIframe } from './components/FastPreviewIframe';
+import { deployProject } from './services/DeployService';
 
 // ── Sidebar sub-components ─────────────────────────────────────────────────────
 
 const WorkflowDashboard = () => {
   const { statuses } = useAutomation();
   const workflows = [
-    { id: 'watchdog',       name: 'Watchdog',       desc: 'Error Handling'    },
-    { id: 'deployment',     name: 'Deployment',     desc: 'Vercel CI/CD'      },
-    { id: 'errorAlert',     name: 'Error-Alert',    desc: 'Discord / Telegram'},
-    { id: 'versionControl', name: 'Version-Control',desc: 'Rollback / History'},
+    { id: 'watchdog', name: 'Watchdog', desc: 'Error Handling' },
+    { id: 'deployment', name: 'Deployment', desc: 'Vercel CI/CD' },
+    { id: 'errorAlert', name: 'Error-Alert', desc: 'Discord / Telegram' },
+    { id: 'versionControl', name: 'Version-Control', desc: 'Rollback / History' },
   ];
   return (
     <div className="sidebar-section">
@@ -64,9 +68,8 @@ const FileExplorer = ({ onAddFile }) => {
   );
 };
 
-const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
+const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, setProjectName }) => {
   const [isListening, setIsListening] = useState(false);
-  const [projectName, setProjectName] = useState('');
   const [textInput, setTextInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
@@ -76,7 +79,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
   useEffect(() => {
     if (generatedFiles && Object.keys(generatedFiles).length > 0) {
       if (!selectedFile || !generatedFiles[selectedFile]) {
-         setSelectedFile(Object.keys(generatedFiles).find(f => f.includes('App.jsx')) || Object.keys(generatedFiles)[0]);
+        setSelectedFile(Object.keys(generatedFiles).find(f => f.includes('App.jsx')) || Object.keys(generatedFiles)[0]);
       }
     }
   }, [generatedFiles, selectedFile]);
@@ -86,7 +89,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
   const processInput = async (input, isEnhance = false) => {
     if (!input.trim()) return;
     if (!projectName.trim()) { alert('Please enter a project name first!'); return; }
-    
+
     if (isEnhance && (!generatedFiles || Object.keys(generatedFiles).length === 0)) {
       alert('Please Build an app first before enhancing!');
       return;
@@ -94,21 +97,22 @@ const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
 
     setIsProcessing(true);
     setStatusMsg(isEnhance ? '✨ Enhancing your code...' : cookingMessages[Math.floor(Math.random() * cookingMessages.length)]);
-    
+
     try {
       let code;
       if (isEnhance) {
         // Find the main component code
         // Find the specific component code
         let mainCode = generatedFiles[selectedFile];
-        if(!mainCode) { alert('Selected file not found!'); return; }
-        
-        const enhancedCode = await refineAppCode(mainCode, input, projectName.trim(), selectedFile);
+        if (!mainCode) { alert('Selected file not found!'); return; }
+
+        const enhancedCode = await refineAppCode(mainCode, input, projectName.trim(), selectedFile, dbConfig);
         code = { ...generatedFiles, ...enhancedCode };
       } else {
-        code = await generateAppFromVoice(input, projectName.trim());
+        const newCode = await generateAppFromVoice(input, projectName.trim(), dbConfig);
+        code = { ...(generatedFiles || {}), ...newCode };
       }
-      
+
       setStatusMsg(isEnhance ? '✨ Enhancing & reviewing...' : '🔍 Reviewing code before applying...');
       onAppGenerated(code, input, projectName.trim(), isEnhance);
       setTextInput('');
@@ -126,9 +130,9 @@ const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) { alert('Speech recognition not supported in this browser.'); return; }
     const r = new SR();
-    r.onstart  = () => setIsListening(true);
+    r.onstart = () => setIsListening(true);
     r.onresult = (e) => { setIsListening(false); processInput(e.results[0][0].transcript); };
-    r.onerror  = () => setIsListening(false);
+    r.onerror = () => setIsListening(false);
     r.start();
   };
 
@@ -159,9 +163,9 @@ const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
         />
         {/* File Selector for Enhancing */}
         {generatedFiles && Object.keys(generatedFiles).length > 0 && (
-          <select 
-            className="ide-input" 
-            value={selectedFile} 
+          <select
+            className="ide-input"
+            value={selectedFile}
             onChange={e => setSelectedFile(e.target.value)}
             disabled={busy}
             style={{ marginBottom: '8px' }}
@@ -184,11 +188,11 @@ const IntentToApp = ({ onAppGenerated, generatedFiles }) => {
           <button type="submit" className="ide-btn" disabled={busy || !textInput.trim() || !projectName.trim()} style={{ flex: 1, minWidth: '80px', background: busy ? '' : 'var(--vscode-accent)' }}>
             {isProcessing && statusMsg && !statusMsg.includes('Enhancing') ? 'Building...' : '⚡ Build'}
           </button>
-          <button 
-            type="button" 
-            className="ide-btn" 
+          <button
+            type="button"
+            className="ide-btn"
             onClick={() => processInput(textInput, true)}
-            disabled={busy || !textInput.trim() || !projectName.trim() || !generatedFiles || Object.keys(generatedFiles).length === 0} 
+            disabled={busy || !textInput.trim() || !projectName.trim() || !generatedFiles || Object.keys(generatedFiles).length === 0}
             style={{ flex: 1, minWidth: '80px', background: 'transparent', borderColor: 'var(--vscode-accent)', color: 'var(--vscode-accent)' }}
             title="Refine existing code with the prompt above"
           >
@@ -237,7 +241,6 @@ const SettingsPanel = ({ currentTheme, setTheme }) => (
   </div>
 );
 
-import sdk from '@stackblitz/sdk';
 
 // ── Shared helper: build StackBlitz file payload from generated files ────────
 const buildProjectFiles = (generatedFiles) => {
@@ -273,117 +276,156 @@ const buildProjectFiles = (generatedFiles) => {
   return files;
 };
 
-// ── Live Preview ──────────────────────────────────────────────────────────────
-const handlePreview = (generatedFiles) => {
-  const files = buildProjectFiles(generatedFiles);
-  sdk.openProject({
-    title: 'SPARK Live Preview',
-    description: 'Preview of your generated application',
-    template: 'node',
-    files,
-  }, { openAsWindow: true, view: 'preview', hideExplorer: true, hideNavigation: true });
-};
+// ── Deploy Button — Lovable-style: SPARK owns the Vercel token, users just click Share ──
 
-// ── Share Button (defined OUTSIDE App so hooks are valid) ──────────────────────
-import { deployToVercel } from './services/VercelService';
-
-const ShareButton = ({ generatedFiles }) => {
+const ShareButton = ({ generatedFiles, projectName }) => {
   const { runAutomation } = useAutomation();
-  const [isDeploying, setIsDeploying] = useState(false);
+  const [status, setStatus] = useState('idle'); // 'idle' | 'deploying' | 'done' | 'error'
   const [link, setLink] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
 
-  const handleShare = async () => {
-    setIsDeploying(true);
+  const handleDeploy = async () => {
+    if (!generatedFiles || Object.keys(generatedFiles).length === 0) return;
+    setStatus('deploying');
+    setErrorMsg('');
     try {
-      const files = buildProjectFiles(generatedFiles);
-      
-      // Push to Vercel API
-      const deployedUrl = await deployToVercel(files);
-      setLink(deployedUrl);
-      
-      runAutomation('deployment', { projectState: 'vercel-deployed', timestamp: Date.now() });
+      const url = await deployProject(generatedFiles, projectName || 'spark-app');
+      setLink(url);
+      setStatus('done');
+      runAutomation('deployment', { url, timestamp: Date.now() });
     } catch (e) {
-      console.error('Failed to deploy to Vercel:', e);
-      alert('Vercel Deployment Failed: ' + e.message);
-    } finally {
-      setIsDeploying(false);
+      console.error('[Deploy]', e);
+      setStatus('error');
+      setErrorMsg(e.message);
     }
   };
 
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-      {link ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <span style={{ fontSize: '0.75rem', color: '#79c0ff' }}>Deployed:</span>
-          <a href={link} target="_blank" rel="noreferrer" style={{ fontSize: '0.75rem', color: '#00fa9a', textDecoration: 'none' }} title={link}>
-            Vercel URL ↗
-          </a>
+  const hasFiles = generatedFiles && Object.keys(generatedFiles).length > 0;
+
+  if (status === 'deploying') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: '#6366f1' }}>
+        <svg style={{ animation: 'spin 1s linear infinite', width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
+        </svg>
+        Publishing...
+      </div>
+    );
+  }
+
+  if (status === 'done' && link) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 10px' }}>
+          <span style={{ color: '#16a34a', fontSize: 11 }}>●</span>
+          <a href={link} target="_blank" rel="noreferrer"
+            style={{ fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 600, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            title={link}
+          >{link.replace('https://', '')}</a>
         </div>
-      ) : (
         <button
-          className="ide-btn"
-          onClick={handleShare}
-          disabled={isDeploying || !generatedFiles}
-          title={generatedFiles ? "Deploy permanently to Vercel" : "Generate a component first"}
-          style={{ margin: 0, padding: '4px 18px', borderRadius: '20px', background: 'var(--vscode-accent)', color: '#fff', fontWeight: 700, border: 'none', opacity: generatedFiles ? 1 : 0.5 }}
-        >
-          {isDeploying ? 'Publishing…' : 'Share'}
-        </button>
-      )}
-    </div>
+          onClick={() => { navigator.clipboard.writeText(link); }}
+          style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#64748b' }}
+          title="Copy link"
+        >Copy</button>
+        <button
+          onClick={() => { setStatus('idle'); setLink(null); }}
+          style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#64748b' }}
+          title="Deploy again"
+        >Redeploy</button>
+      </div>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ fontSize: '0.75rem', color: '#ef4444' }} title={errorMsg}>Deploy failed</span>
+        <button
+          onClick={() => setStatus('idle')}
+          style={{ background: 'none', border: '1px solid #fca5a5', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#ef4444' }}
+        >Retry</button>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      className="ide-btn premium-btn share-btn"
+      onClick={handleDeploy}
+      disabled={!hasFiles}
+      title={hasFiles ? 'Publish to cloud and get shareable link' : 'Generate a component first'}
+    >
+      Deploy
+    </button>
   );
 };
 
 // ── Error boundary wrapper ─────────────────────────────────────────────────────
 const ErrorBoundaryWrapper = ({ children }) => (
-  <ErrorBoundary onAutomationTrigger={() => {}} onAutomationEnd={() => {}}>{children}</ErrorBoundary>
+  <ErrorBoundary onAutomationTrigger={() => { }} onAutomationEnd={() => { }}>{children}</ErrorBoundary>
 );
-
-// ── Preview Button ──────────────────────────────────────────────────────────
-const PreviewButton = ({ generatedFiles }) => {
-  const hasFiles = generatedFiles && Object.keys(generatedFiles).length > 0;
-  return (
-    <button
-      className="ide-btn"
-      onClick={() => handlePreview(generatedFiles)}
-      disabled={!hasFiles}
-      title={hasFiles ? 'Preview your generated app' : 'Generate a component first'}
-      style={{ margin: 0, padding: '4px 14px', borderRadius: '20px', background: hasFiles ? '#2a2a4a' : 'transparent', color: hasFiles ? '#79c0ff' : '#555', fontWeight: 600, border: '1px solid', borderColor: hasFiles ? '#79c0ff55' : '#333' }}
-    >
-      👁 Live Preview
-    </button>
-  );
-};
 
 // ── Main App ───────────────────────────────────────────────────────────────────
 function App() {
-  const [generatedFiles,  setGeneratedFiles]  = useState(null);
-  const [manualFile,      setManualFile]      = useState(null);
-  const [wcBooted,        setWcBooted]        = useState(false);
-  const [activeTab,       setActiveTab]       = useState('terminal');
-  const [activeActivity,  setActiveActivity]  = useState('explorer');
-  const [theme,           setTheme]           = useState('antigravity');
-  const [wcCrashLog,      setWcCrashLog]      = useState(null);
+  const [generatedFiles, setGeneratedFiles] = useState(null);
+  const [manualFile, setManualFile] = useState(null);
+  const [wcBooted, setWcBooted] = useState(false);
+  const [activeTab, setActiveTab] = useState('terminal');
+  const [activeActivity, setActiveActivity] = useState('explorer');
+  const [theme, setTheme] = useState('light');
+  const [wcCrashLog, setWcCrashLog] = useState(null);
+  const [terminalLogs, setTerminalLogs] = useState([]);
+  const [workspaceType, setWorkspaceType] = useState('team'); // 'personal' | 'team'
+  const [personalFiles, setPersonalFiles] = useState({});
+  const [teamFiles, setTeamFiles] = useState(null);
+  const [appProjectName, setAppProjectName] = useState('spark-app');
+  
+  // ── Database state ─────────────────────────────────────────────────────────
+  const [dbStatus, setDbStatus] = useState('idle');
+  const [dbConfig, setDbConfig] = useState(null);
+
+  useEffect(() => {
+    const wsId = getOrCreateWorkspaceId();
+    fetchWorkspaceDatabase(wsId).then(cfg => {
+      if (cfg) {
+        setDbConfig(cfg);
+        setDbStatus('active');
+      }
+    });
+  }, []);
+
+  const logActivity = useCallback((msg) => {
+    setTerminalLogs(prev => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`]);
+  }, []);
 
   // ── Code Review state ─────────────────────────────────────────────────
-  const [pendingReview,   setPendingReview]   = useState(null); // { files, prompt, projectName, reviewResult }
-  const [isReviewing,     setIsReviewing]     = useState(false);
+  const [pendingReview, setPendingReview] = useState(null);
+  const [isReviewing, setIsReviewing] = useState(false);
 
   // ── Team / Presence state ──────────────────────────────────────────────────
-  const [identity,        setIdentity]        = useState(() => getOrCreateUserIdentity());
-  const [members,         setMembers]         = useState([]);
-  const [inviteToast,     setInviteToast]     = useState(false);
+  const [identity, setIdentity] = useState(() => getOrCreateUserIdentity());
+  const [members, setMembers] = useState([]);
+  const [inviteToast, setInviteToast] = useState(false);
 
   // Join the workspace presence channel once identity is set
   useEffect(() => {
     if (!identity) return;
     const workspaceId = getOrCreateWorkspaceId();
+
+    // Fetch historical workspace files from logs table for late joiners
+    fetchWorkspaceFiles(workspaceId).then(files => {
+      if (files && Object.keys(files).length > 0) {
+        setGeneratedFiles(files);
+        logActivity(`Fetched ${Object.keys(files).length} files from team workspace history.`);
+      }
+    });
+
     window.__sparkOnRemoteCodeGenerated = (files) => {
-      // Remote code comes straight to canvas (already reviewed on sender's side)
-      setGeneratedFiles(files);
+      setGeneratedFiles(prev => ({ ...prev, ...files }));
+      logActivity(`Remote teammate generated: ${Object.keys(files).join(', ')}`);
     };
     const unsubscribe = joinWorkspacePresence(workspaceId, identity, (newMembers) => {
-      // Force a fresh array so React re-renders
       setMembers([...newMembers]);
     });
     return () => {
@@ -394,7 +436,6 @@ function App() {
 
   // Called by IntentToApp — triggers review pipeline instead of direct canvas apply
   const setAndBroadcastFiles = useCallback(async (files, originalPrompt, projectName) => {
-    // Switch to AI BUILDER tab to show the review
     setActiveTab('ai builder');
     setPendingReview({ files, prompt: originalPrompt || '', projectName: projectName || '', reviewResult: null });
     setIsReviewing(true);
@@ -416,7 +457,6 @@ function App() {
       setInviteToast(true);
       setTimeout(() => setInviteToast(false), 3000);
     }).catch(() => {
-      // Fallback: prompt the user to copy manually
       prompt('Copy this invite link:', getWorkspaceInviteUrl());
     });
   };
@@ -424,15 +464,34 @@ function App() {
   const handleApplyToCanvas = (files) => {
     setGeneratedFiles(files);
     setPendingReview(null);
-    // Broadcast to teammates
+    setWcCrashLog(null);
+    logActivity(`${identity?.name || 'You'} applied to canvas: ${Object.keys(files).join(', ')}`);
     if (identity) {
       const workspaceId = getOrCreateWorkspaceId();
       broadcastCodeGenerated(workspaceId, files);
     }
   };
 
+  const handleAutoHeal = async () => {
+    if (!generatedFiles || !wcCrashLog) return;
+    setActiveTab('ai builder');
+    setPendingReview({ files: generatedFiles, prompt: 'Auto-healing crash', projectName: 'CrashFix', reviewResult: null });
+    setIsReviewing(true);
+
+    try {
+      const fixedFiles = await autoHealCode(generatedFiles, wcCrashLog);
+      setPendingReview({ files: fixedFiles, prompt: 'Auto-healing crash', projectName: 'CrashFix', reviewResult: { status: 'fixed', issues: ['Auto-healed based on WebContainer runtime error logs.'] } });
+    } catch (e) {
+      console.error('Auto-heal failed:', e);
+      setPendingReview(null);
+      alert('Failed to auto-heal the code.');
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
   useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
-  useEffect(() => { bootWebContainer().then(() => setWcBooted(true)).catch(() => {}); }, []);
+  useEffect(() => { bootWebContainer().then(() => setWcBooted(true)).catch(() => { }); }, []);
 
   const handleAddManualFile = (filename) => setManualFile({ name: filename, timestamp: Date.now() });
 
@@ -446,47 +505,70 @@ function App() {
     );
   };
 
-const DatabasePanel = () => {
-  const [dbStatus, setDbStatus] = useState('idle');
+  const DatabasePanel = () => {
 
-  const handleProvision = () => {
-    setDbStatus('provisioning');
-    setTimeout(() => setDbStatus('active'), 3000);
-  };
+    const handleProvision = async () => {
+      setDbStatus('provisioning');
+      const wsId = getOrCreateWorkspaceId();
+      try {
+        const config = await provisionUserDatabase(wsId);
+        setDbConfig(config);
+        setDbStatus('active');
+      } catch (e) {
+        console.error(e);
+        setDbStatus('idle');
+      }
+    };
 
-  return (
-    <div className="sidebar-section">
-      <h3>DATABASE (SUPABASE)</h3>
-      <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '10px' }}>
-        Provision a serverless Postgres database for your project.
-      </div>
-      {dbStatus === 'idle' && (
-        <button className="ide-btn ide-btn-secondary" onClick={handleProvision}>
-          Provision Database
-        </button>
-      )}
-      {dbStatus === 'provisioning' && (
-        <div style={{ color: '#00fa9a', fontSize: '0.8rem' }}>Spinning up instances...</div>
-      )}
-      {dbStatus === 'active' && (
-        <div style={{ background: '#1e1e1e', padding: '10px', borderRadius: '4px', border: '1px solid #333' }}>
-          <div style={{ color: '#00fa9a', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '4px' }}>● Database Active</div>
-          <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>Credentials injected into StackBlitz deployment.</div>
+    return (
+      <div className="sidebar-section">
+        <h3>DATABASE (SUPABASE)</h3>
+        <div style={{ fontSize: '0.8rem', opacity: 0.8, marginBottom: '10px' }}>
+          Provision a serverless Postgres database for your project.
         </div>
-      )}
-    </div>
-  );
-};
+        {dbStatus === 'idle' && (
+          <button className="ide-btn ide-btn-secondary" onClick={handleProvision}>
+            Provision Database
+          </button>
+        )}
+        {dbStatus === 'provisioning' && (
+          <div style={{ color: '#00fa9a', fontSize: '0.8rem' }}>Spinning up Supabase Postgres instance...</div>
+        )}
+        {dbStatus === 'active' && dbConfig && (
+          <div style={{ background: 'var(--vscode-bg)', padding: '10px', borderRadius: '6px', border: '1px solid var(--vscode-border)' }}>
+            <div style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '4px' }}>● Supabase Database Active</div>
+            <div style={{ fontSize: '0.7rem', opacity: 0.7, wordBreak: 'break-all', marginBottom: '4px' }}>
+              URL: <code>{dbConfig.url}</code>
+            </div>
+            <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>
+              Table: <code>{dbConfig.table}</code>
+            </div>
+            <div style={{ fontSize: '0.65rem', color: '#6366f1', marginTop: '6px', fontWeight: 600 }}>
+              ✓ Real-time sync enabled for workspace
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderSidebar = () => {
     if (activeActivity === 'settings') return <SettingsPanel currentTheme={theme} setTheme={setTheme} />;
-    if (activeActivity === 'search')   return <div className="sidebar-section"><p style={{opacity:0.4,fontSize:'0.8rem'}}>Search not yet implemented.</p></div>;
-    if (activeActivity === 'source')   return <div className="sidebar-section"><p style={{opacity:0.4,fontSize:'0.8rem'}}>Source control not yet implemented.</p></div>;
+    if (activeActivity === 'preview') return (
+      <div className="sidebar-section">
+        <h3>LIVE PREVIEW</h3>
+        <p style={{ opacity: 0.8, fontSize: '0.85rem' }}>
+          👁️ Preview mode active.<br/><br/>
+          The live app is now rendering in the main window.<br/><br/>
+          Switch back to the Explorer (📄) to see your code.
+        </p>
+      </div>
+    );
+    if (activeActivity === 'source') return <div className="sidebar-section"><p style={{ opacity: 0.4, fontSize: '0.8rem' }}>Source control not yet implemented.</p></div>;
     return (
       <>
         <FileExplorer onAddFile={handleAddManualFile} />
         <DatabasePanel />
-        {/* Team Members in sidebar */}
         {members.length > 0 && (
           <div className="sidebar-section">
             <h3>ONLINE NOW ({members.length})</h3>
@@ -507,8 +589,8 @@ const DatabasePanel = () => {
 
   const activityIcons = [
     { id: 'explorer', icon: '📄' },
-    { id: 'search',   icon: '🔍' },
-    { id: 'source',   icon: '🌿' },
+    { id: 'preview', icon: '👁️' },
+    { id: 'source', icon: '🌿' },
   ];
 
   if (!identity) {
@@ -540,48 +622,88 @@ const DatabasePanel = () => {
             {renderSidebar()}
           </div>
 
-          {/* Main Editor */}
-          <div className="ide-main">
+          {/* Main IDE area */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="editor-tabs" style={{ justifyContent: 'space-between', paddingRight: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <div className="tab">⚛️ Canvas.jsx</div>
-                <select className="ide-input" style={{ marginLeft: '10px', height: '24px', padding: '0 8px', width: 'auto', background: 'transparent', border: '1px solid var(--vscode-border)', borderRadius: '4px' }}>
-                  <option>Personal Workspace</option>
-                  <option>Team Workspace</option>
+                <select
+                  className="ide-input"
+                  value={workspaceType}
+                  onChange={(e) => {
+                    const nextType = e.target.value;
+                    setWorkspaceType(nextType);
+                    if (nextType === 'personal') {
+                      setTeamFiles(generatedFiles || {});
+                      setGeneratedFiles(personalFiles || {});
+                    } else {
+                      setPersonalFiles(generatedFiles || {});
+                      setGeneratedFiles(teamFiles || {});
+                    }
+                  }}
+                  style={{ marginLeft: '10px', height: '24px', padding: '0 8px', width: 'auto', background: 'transparent', border: '1px solid var(--vscode-border)', borderRadius: '4px' }}
+                >
+                  <option value="personal">Personal Workspace</option>
+                  <option value="team">Team Workspace</option>
                 </select>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                {/* Dynamic Team Presence Indicators */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Notion-style avatar cluster */}
                 <div style={{ display: 'flex', alignItems: 'center' }}>
-                  {/* Always show self */}
                   <div
                     title={`${identity.name} (You)`}
-                    style={{ width: '28px', height: '28px', borderRadius: '50%', background: identity.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#000', fontWeight: 'bold', border: '2px solid var(--vscode-bg)', zIndex: 10, flexShrink: 0 }}
-                  >{identity.initials}</div>
-                  {/* Other online members */}
+                    style={{
+                      width: 30, height: 30, borderRadius: '50%',
+                      background: identity.color, color: '#fff',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.72rem', fontWeight: 700,
+                      border: '2px solid var(--vscode-bg)',
+                      boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                      zIndex: 10, flexShrink: 0, cursor: 'default', position: 'relative'
+                    }}
+                  >
+                    {identity.initials}
+                    <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--vscode-bg)' }} />
+                  </div>
                   {members.filter(m => m.id !== identity.id).map((m, i) => (
                     <div
                       key={m.id || i}
-                      title={`${m.name} (teammate)`}
-                      style={{ width: '28px', height: '28px', borderRadius: '50%', background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#000', fontWeight: 'bold', border: '2px solid var(--vscode-bg)', marginLeft: '-8px', zIndex: 9 - i, flexShrink: 0 }}
-                    >{m.initials}</div>
+                      title={m.name}
+                      style={{
+                        width: 30, height: 30, borderRadius: '50%',
+                        background: m.color, color: '#fff',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.72rem', fontWeight: 700,
+                        border: '2px solid var(--vscode-bg)',
+                        boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
+                        marginLeft: -8, zIndex: 9 - i, flexShrink: 0, cursor: 'default', position: 'relative'
+                      }}
+                    >
+                      {m.initials}
+                      <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--vscode-bg)' }} />
+                    </div>
                   ))}
                 </div>
-                {/* Invite Button */}
-                <div style={{ position: 'relative' }}>
-                  <button
-                    onClick={handleInvite}
-                    style={{ background: 'transparent', border: '1px dashed var(--vscode-border)', padding: '4px 10px', borderRadius: '4px', fontSize: '0.8rem', color: inviteToast ? '#56d364' : 'var(--vscode-text)', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}
-                  >
-                    {inviteToast ? '✓ Link Copied!' : '+ Invite Team'}
-                  </button>
-                </div>
-                <PreviewButton generatedFiles={generatedFiles} />
-                <ShareButton generatedFiles={generatedFiles} />
+                <div style={{ width: 1, height: 18, background: 'var(--vscode-border)', margin: '0 4px' }} />
+                <ShareButton generatedFiles={generatedFiles} projectName={appProjectName} />
+                <button className="ide-btn premium-btn invite-btn" onClick={handleInvite}>
+                  {inviteToast ? 'Copied' : 'Invite'}
+                </button>
               </div>
             </div>
 
-            <CanvasEditor newGeneratedFiles={generatedFiles} manualFile={manualFile} />
+            <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+              {/* Canvas Editor OR Full Preview */}
+              {activeActivity === 'preview' ? (
+                <div style={{ flex: 1, height: '100%', background: '#fff' }}>
+                  <FastPreviewIframe generatedFiles={generatedFiles} />
+                </div>
+              ) : (
+                <div style={{ flex: 1 }}>
+                  <CanvasEditor newGeneratedFiles={generatedFiles} manualFile={manualFile} theme={theme} />
+                </div>
+              )}
+            </div>
 
             {/* Bottom Terminal Panel */}
             <div className="bottom-panel" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -607,7 +729,7 @@ const DatabasePanel = () => {
                       onDiscard={() => setPendingReview(null)}
                     />
                   ) : (
-                    <IntentToApp onAppGenerated={setAndBroadcastFiles} generatedFiles={generatedFiles} />
+                    <IntentToApp onAppGenerated={setAndBroadcastFiles} generatedFiles={generatedFiles} dbConfig={dbConfig} projectName={appProjectName} setProjectName={setAppProjectName} />
                   )
                 ) : activeTab === 'terminal' ? (
                   <div>
@@ -615,10 +737,31 @@ const DatabasePanel = () => {
                     {wcBooted ? ' npm run dev  [running on port 3000]' : ' booting WebContainer environment…'}
                     <br /><br />
                     <span style={{ color: '#555' }}>&gt; {wcBooted ? 'Ready.' : 'Waiting for WebContainer headers…'}</span>
+
+                    {/* Activity Logs */}
+                    <div style={{ marginTop: '1rem' }}>
+                      {terminalLogs.map((log, i) => (
+                        <div key={i} style={{ color: '#aaa', fontSize: '0.8rem', marginBottom: '4px', fontFamily: 'monospace' }}>
+                          <span style={{ color: '#79c0ff' }}>→</span> {log}
+                        </div>
+                      ))}
+                    </div>
+
                     {wcCrashLog && (
-                      <pre style={{ marginTop: '1rem', color: '#f14c4c', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-family)', fontSize: '0.82rem' }}>
-                        {wcCrashLog}
-                      </pre>
+                      <div style={{ marginTop: '1rem', background: 'rgba(241, 76, 76, 0.1)', padding: '10px', borderRadius: '4px', border: '1px solid rgba(241, 76, 76, 0.3)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ color: '#f14c4c', fontWeight: 'bold', fontSize: '0.75rem' }}>RUNTIME ERROR</span>
+                          <button
+                            onClick={handleAutoHeal}
+                            style={{ background: 'linear-gradient(135deg, #6e40c9, #58a6ff)', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 'bold' }}
+                          >
+                            ✨ Auto-Heal with AI
+                          </button>
+                        </div>
+                        <pre style={{ color: '#f14c4c', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-family)', fontSize: '0.82rem', margin: 0 }}>
+                          {wcCrashLog}
+                        </pre>
+                      </div>
                     )}
                   </div>
                 ) : (

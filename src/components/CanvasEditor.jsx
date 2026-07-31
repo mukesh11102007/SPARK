@@ -1,34 +1,75 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ReactFlow, useNodesState, useEdgesState, addEdge, Background, Controls, Handle, Position } from '@xyflow/react';
+import {
+  ReactFlow, useNodesState, useEdgesState, addEdge,
+  Background, BackgroundVariant, Controls, Handle, Position, MiniMap,
+  getBezierPath
+} from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { subscribeToCanvasUpdates, broadcastCanvasUpdate } from '../services/SupabaseService';
 
-const initialNodes = [];
 const initialEdges = [];
 
-const CustomNode = ({ data, id }) => {
+// ── Custom n8n-style Node ─────────────────────────────────────────────────────
+const CustomNode = ({ data, id, selected }) => {
   const [editing, setEditing] = useState(false);
   const [label, setLabel] = useState(data.label);
-
-  const handleRename = () => {
-    setEditing(true);
-  };
+  const [copied, setCopied] = useState(false);
 
   const commitRename = () => {
     setEditing(false);
     if (data.onRename) data.onRename(id, label);
   };
 
+  const handleCopy = () => {
+    if (data.code) {
+      navigator.clipboard.writeText(data.code).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
+  };
+
+  // derive file type tag
+  const ext = data.label?.split('.').pop() || 'jsx';
+  const typeColors = { jsx: '#10b981', tsx: '#6366f1', js: '#f59e0b', ts: '#3b82f6', css: '#ec4899' };
+  const tagColor = typeColors[ext] || '#10b981';
+
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '10px 14px', background: '#1e1e2e', border: '1px solid #3a3a5c',
-      borderRadius: '8px', minWidth: '160px', boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
-      transition: 'border-color 0.2s', cursor: 'grab',
+      background: '#ffffff',
+      border: selected ? '2px solid #10b981' : '1.5px solid #10b981',
+      borderRadius: '12px',
+      minWidth: '210px',
+      maxWidth: '260px',
+      boxShadow: selected
+        ? '0 0 0 4px rgba(16,185,129,0.15), 0 8px 24px rgba(0,0,0,0.1)'
+        : '0 4px 12px rgba(0,0,0,0.08)',
+      transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+      overflow: 'hidden',
+      cursor: 'grab',
+      fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+      position: 'relative',
     }}>
-      <Handle type="target" position={Position.Left} style={{ background: '#00fa9a', width: 10, height: 10, left: -5 }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+
+      {/* ✓ checked badge top-right like n8n */}
+      <div style={{
+        position: 'absolute', top: -1, right: 10,
+        background: '#10b981', borderRadius: '0 0 6px 6px',
+        width: 22, height: 18,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 11, color: '#fff', fontWeight: 700,
+        zIndex: 2,
+      }}>✓</div>
+
+      {/* Header */}
+      <div style={{
+        padding: '12px 14px 10px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+      }}>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>⚛️</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {editing ? (
             <input
               autoFocus
@@ -36,32 +77,98 @@ const CustomNode = ({ data, id }) => {
               onChange={e => setLabel(e.target.value)}
               onBlur={commitRename}
               onKeyDown={e => e.key === 'Enter' && commitRename()}
-              style={{ background: '#12121e', border: '1px solid #6c5ce7', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.82rem', width: '100%' }}
+              style={{
+                border: '1px solid #10b981', borderRadius: 4,
+                padding: '2px 6px', fontSize: '0.82rem', width: '100%',
+                outline: 'none', background: '#f0fdf4', color: '#064e3b'
+              }}
             />
           ) : (
-            <span
-              style={{ fontWeight: 600, fontSize: '0.82rem', cursor: 'text' }}
-              onDoubleClick={handleRename}
+            <div
+              style={{
+                fontWeight: 600, fontSize: '0.85rem', color: '#111827',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                cursor: 'text',
+              }}
+              onDoubleClick={() => setEditing(true)}
               title="Double-click to rename"
             >
-              📄 {data.label}
-            </span>
+              {data.label}
+            </div>
           )}
-          <div style={{ display: 'flex', gap: 4, marginLeft: 8 }}>
-            <button title="Rename" style={{ background: 'transparent', color: '#79c0ff', border: 'none', cursor: 'pointer', fontSize: 12, padding: '0 2px' }} onClick={handleRename}>✏️</button>
-            <button title="Delete" style={{ background: 'transparent', color: '#ff7b72', border: 'none', cursor: 'pointer', fontSize: 12, padding: '0 2px' }} onClick={() => data.onDelete && data.onDelete(id)}>×</button>
-          </div>
         </div>
-        <div style={{ opacity: 0.4, fontSize: '0.68rem', letterSpacing: '0.04em' }}>React Component</div>
+        <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
+          {data.code && (
+            <button
+              onClick={handleCopy}
+              title="Copy code"
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                color: copied ? '#10b981' : '#9ca3af', fontSize: 13,
+                padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
+              }}
+            >
+              {copied ? '✓' : '⧉'}
+            </button>
+          )}
+          <button
+            onClick={() => data.onDelete && data.onDelete(id)}
+            title="Delete"
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: '#d1d5db', fontSize: 16, padding: '2px 3px', lineHeight: 1,
+              transition: 'color 0.15s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+            onMouseLeave={e => e.currentTarget.style.color = '#d1d5db'}
+          >×</button>
+        </div>
       </div>
-      <Handle type="source" position={Position.Right} style={{ background: '#00fa9a', width: 10, height: 10, right: -5 }} />
+
+      {/* Footer info bar */}
+      <div style={{
+        borderTop: '1px solid #f0fdf4',
+        padding: '6px 14px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        background: '#f9fafb',
+      }}>
+        <span style={{
+          background: tagColor, color: '#fff', fontSize: '0.65rem',
+          fontWeight: 700, padding: '1px 6px', borderRadius: 4,
+          textTransform: 'uppercase', letterSpacing: '0.04em',
+        }}>.{ext}</span>
+        <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>React Component</span>
+        {/* + port on the right side like n8n */}
+        <span style={{
+          marginLeft: 'auto', background: '#e5e7eb', color: '#374151',
+          borderRadius: '50%', width: 16, height: 16,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
+        }}>+</span>
+      </div>
+
+      {/* Handles */}
+      <Handle type="target" position={Position.Left}
+        style={{
+          background: '#d1d5db', width: 10, height: 10, left: -5,
+          border: '2px solid #fff', boxShadow: '0 0 0 1.5px #9ca3af',
+        }}
+      />
+      <Handle type="source" position={Position.Right}
+        style={{
+          background: '#d1d5db', width: 10, height: 10, right: -5,
+          border: '2px solid #fff', boxShadow: '0 0 0 1.5px #9ca3af',
+        }}
+      />
     </div>
   );
 };
 
 const nodeTypes = { customNode: CustomNode };
 
-export const CanvasEditor = ({ newGeneratedFiles, manualFile }) => {
+export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
@@ -82,16 +189,14 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile }) => {
     onRename: handleRenameNode,
   }), [handleDeleteNode, handleRenameNode]);
 
-  // Initialize nodes
-  useEffect(() => {
-    setNodes(initialNodes.map(n => ({ ...n, data: makeNodeData({ label: n.data.label }) })));
-  }, [makeNodeData]);
-
-  // Supabase realtime
+  // Supabase realtime canvas sync
   useEffect(() => {
     const unsub = subscribeToCanvasUpdates((payload) => {
       if (payload.nodes) {
-        setNodes(payload.nodes.map(n => ({ ...n, data: makeNodeData({ label: n.data?.label || 'Component' }) })));
+        setNodes(payload.nodes.map(n => ({
+          ...n,
+          data: makeNodeData({ label: n.data?.label || 'Component', code: n.data?.code }),
+        })));
       }
     });
     return unsub;
@@ -100,34 +205,61 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile }) => {
   // Manual file additions
   useEffect(() => {
     if (!manualFile) return;
-    const newNode = {
+    setNodes(nds => [...nds, {
       id: `manual-${manualFile.timestamp}`,
-      position: { x: 100 + Math.random() * 200, y: 100 + Math.random() * 150 },
+      position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 150 },
       type: 'customNode',
       data: makeNodeData({ label: manualFile.name }),
-    };
-    setNodes(nds => [...nds, newNode]);
+    }]);
   }, [manualFile]);
 
-  // AI generated files
+  // AI-generated files → nodes, laid out in a grid like n8n
   useEffect(() => {
     if (!newGeneratedFiles) return;
-    const newNodes = Object.keys(newGeneratedFiles).map((filename, index) => ({
-      id: `gen-${Date.now()}-${index}`,
-      position: { x: 300 + (index * 40), y: 100 + (index * 70) },
+    const entries = Object.entries(newGeneratedFiles);
+    const cols = Math.min(entries.length, 2);
+    const newNodes = entries.map(([filename, code], index) => ({
+      id: `gen-${filename}`,
+      position: {
+        x: 80 + (index % cols) * 300,
+        y: 80 + Math.floor(index / cols) * 180,
+      },
       type: 'customNode',
-      data: makeNodeData({ label: filename }),
+      data: makeNodeData({ label: filename, code }),
     }));
-    setNodes(nds => [...nds, ...newNodes]);
+
+    setNodes(nds => {
+      const keep = nds.filter(n => !n.id.startsWith('gen-'));
+      return [...keep, ...newNodes];
+    });
+
+    // Chain edges between consecutive nodes
+    if (newNodes.length > 1) {
+      const chainEdges = newNodes.slice(0, -1).map((n, i) => ({
+        id: `chain-${i}`,
+        source: n.id,
+        target: newNodes[i + 1].id,
+        type: 'smoothstep',
+        animated: false,
+        style: { stroke: '#d1d5db', strokeWidth: 2 },
+      }));
+      setEdges(chainEdges);
+    }
   }, [newGeneratedFiles]);
 
   const onConnect = useCallback((params) => {
-    setEdges(eds => addEdge({ ...params, animated: true, style: { stroke: '#6c5ce7' } }, eds));
+    setEdges(eds => addEdge({
+      ...params,
+      type: 'smoothstep',
+      style: { stroke: '#d1d5db', strokeWidth: 2 },
+    }, eds));
     broadcastCanvasUpdate(nodes);
   }, [setEdges, nodes]);
 
+  const isDark = theme === 'antigravity';
+
   return (
-    <div className="editor-content">
+    <div style={{ width: '100%', height: '100%', flex: 1 }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -136,11 +268,35 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile }) => {
         onConnect={onConnect}
         onNodeDragStop={(_, __, allNodes) => broadcastCanvasUpdate(allNodes)}
         nodeTypes={nodeTypes}
-        colorMode="dark"
-        style={{ background: 'var(--vscode-bg)' }}
+        colorMode={isDark ? 'dark' : 'light'}
+        style={{
+          background: isDark ? '#0d0d12' : '#ffffff',
+          width: '100%',
+          height: '100%',
+        }}
+        fitView
+        fitViewOptions={{ padding: 0.4, maxZoom: 1 }}
+        minZoom={0.2}
+        maxZoom={2.5}
+        proOptions={{ hideAttribution: true }}
       >
-        <Background color="#2a2a3a" gap={20} variant="dots" size={1.5} />
-        <Controls />
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={22}
+          size={1.8}
+          color={isDark ? '#2a2a3e' : '#c8cdd6'}
+        />
+        <Controls showInteractive={false} />
+        <MiniMap
+          nodeColor={() => '#10b981'}
+          nodeStrokeWidth={2}
+          style={{
+            background: isDark ? '#12121a' : '#f8fafc',
+            border: `1px solid ${isDark ? '#2a2a3e' : '#e2e8f0'}`,
+            borderRadius: 8,
+          }}
+          maskColor={isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'}
+        />
       </ReactFlow>
     </div>
   );

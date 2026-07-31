@@ -274,3 +274,79 @@ body {
   font-size: 1rem;
 }
 .node-delete-btn:hover { color: #f14c4c; }
+
+/* Premium Buttons (Notion/Vercel Professional Style) */
+.premium-btn {
+  margin: 0;
+  border: 1px solid var(--vscode-border);
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.82rem;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--vscode-bg);
+  color: var(--vscode-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.premium-btn:hover:not(:disabled) {
+  background: var(--vscode-sidebar);
+  border-color: #999;
+}
+
+.premium-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.premium-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Specific Button Styles */
+.share-btn {
+  background: #000;
+  color: #fff;
+  border: 1px solid #000;
+}
+.share-btn:hover:not(:disabled) {
+  background: #333;
+  color: #fff;
+  border-color: #333;
+}
+[data-theme="antigravity"] .share-btn {
+  background: #fff;
+  color: #000;
+  border: 1px solid #fff;
+}
+[data-theme="antigravity"] .share-btn:hover:not(:disabled) {
+  background: #e0e0e0;
+  color: #000;
+}
+
+.preview-btn.active {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+[data-theme="antigravity"] .preview-btn.active {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+
+.theme-btn {
+  padding: 4px 10px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

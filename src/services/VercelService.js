@@ -14,10 +14,7 @@ export const deployToVercel = async (filesMap, projectName = 'spark-generated-ap
     body: JSON.stringify({
       name: projectName.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, 50) || 'spark-app',
       target: 'production',
-      files,
-      projectSettings: {
-        framework: 'vite',
-      },
+      files
     }),
   });
 
