@@ -29,9 +29,15 @@ export const AuthModal = ({ onLogin }) => {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Authentication failed');
 
+      const userWithStyles = {
+        ...data.user,
+        initials: data.user.name.substring(0, 2).toUpperCase(),
+        color: `hsl(${Math.floor(Math.random() * 360)}, 70%, 50%)`
+      };
+
       localStorage.setItem('spark_token', data.token);
-      localStorage.setItem('spark_user', JSON.stringify(data.user));
-      onLogin(data.user);
+      localStorage.setItem('spark_user', JSON.stringify(userWithStyles));
+      onLogin(userWithStyles);
     } catch (err) {
       setError(err.message);
     } finally {

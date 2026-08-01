@@ -535,16 +535,45 @@ function App() {
     if (!identity) return;
     const workspaceId = getOrCreateWorkspaceId();
 
-    // Fetch historical workspace files from Supabase logs table for late joiners
-    fetchWorkspaceFiles(workspaceId).then(files => {
-      if (files && Object.keys(files).length > 0) {
-        setGeneratedFiles(files);
-        setTeamFiles(files);
-        logActivity(`Fetched ${Object.keys(files).length} files from team workspace history.`);
-      } else {
+    // Fetch historical workspace files from Express backend
+    const loadTeamFiles = async () => {
+      try {
+        const token = localStorage.getItem('spark_token');
+        if (!token) return;
+        const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.files && Object.keys(data.files).length > 0) {
+            setGeneratedFiles(data.files);
+            setTeamFiles(data.files);
+            logActivity(`Fetched ${Object.keys(data.files).length} files from Workspace Database.`);
+          } else {
+            // Fallback to Supabase logs for older workspaces
+            fetchWorkspaceFiles(workspaceId).then(supaFiles => {
+              if (supaFiles && Object.keys(supaFiles).length > 0) {
+                setGeneratedFiles(supaFiles);
+                setTeamFiles(supaFiles);
+                logActivity(`Migrated ${Object.keys(supaFiles).length} files from Supabase history.`);
+                // Save to MongoDB to complete migration
+                fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                  body: JSON.stringify({ files: supaFiles })
+                });
+              } else {
+                setTeamFiles({});
+              }
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load team files from DB', err);
         setTeamFiles({});
       }
-    });
+    };
+    loadTeamFiles();
 
     // Load Personal Files from Local Storage
     const savedPersonal = localStorage.getItem('spark_personal_files');
@@ -608,6 +637,20 @@ function App() {
       if (identity) {
         const workspaceId = getOrCreateWorkspaceId();
         broadcastCodeGenerated(workspaceId, files);
+        
+        // Save to MongoDB Backend
+        try {
+          const token = localStorage.getItem('spark_token');
+          if (token) {
+            fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ files })
+            });
+          }
+        } catch (e) {
+          console.error('Failed to save to MongoDB:', e);
+        }
       }
     }
   };
@@ -747,6 +790,15 @@ function App() {
               </div>
             ))}
           </div>
+          {fileKeys.length > 0 && (
+            <button 
+              className="ide-btn" 
+              style={{ marginTop: '15px' }}
+              onClick={() => handleApplyToCanvas(generatedFiles)}
+            >
+              Save & Sync Changes
+            </button>
+          )}
         </div>
       );
     }
@@ -777,7 +829,7 @@ function App() {
   const activities = [
     { id: 'explorer', icon: '📄' },
     { id: 'preview', icon: '👁️' },
-    ...(isNonTech ? [] : [{ id: 'source', icon: '🌿' }]),
+    { id: 'source', icon: '🌿' },
     { id: 'settings', icon: '⚙️' }
   ];
 
@@ -816,7 +868,6 @@ function App() {
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
             <div className="editor-tabs" style={{ justifyContent: 'space-between', paddingRight: '12px' }}>
               <div style={{ display: 'flex', alignItems: 'center' }}>
-                <div className="tab">⚛️ Canvas.jsx</div>
                 <select
                   className="ide-input"
                   value={workspaceType}
@@ -858,7 +909,7 @@ function App() {
                     title={`${identity.name} (You)`}
                     style={{
                       width: 30, height: 30, borderRadius: '50%',
-                      background: identity.color, color: '#fff',
+                      background: identity.color || 'var(--vscode-accent)', color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.72rem', fontWeight: 700,
                       border: '2px solid var(--vscode-bg)',
@@ -866,7 +917,7 @@ function App() {
                       zIndex: 10, flexShrink: 0, cursor: 'default', position: 'relative'
                     }}
                   >
-                    {identity.initials}
+                    {identity.initials || identity.name?.substring(0, 2).toUpperCase() || 'U'}
                     <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--vscode-bg)' }} />
                   </div>
                   {members.filter(m => m.id !== identity.id).map((m, i) => (
