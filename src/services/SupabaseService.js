@@ -60,7 +60,10 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
   };
 
   presenceChannel = supabase.channel(`spark-presence-${workspaceId}`, {
-    config: { presence: { key: identity.id } },
+    config: { 
+      presence: { key: identity.id },
+      broadcast: { ack: true }
+    },
   });
 
   presenceChannel
@@ -80,8 +83,8 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
       }
     })
     .on('broadcast', { event: 'canvas_update' }, ({ payload }) => {
-      if (payload?.nodes && window.__sparkOnRemoteCanvasUpdate) {
-        window.__sparkOnRemoteCanvasUpdate(payload.nodes);
+      if (payload && window.__sparkOnRemoteCanvasUpdate) {
+        window.__sparkOnRemoteCanvasUpdate(payload);
       }
     })
     .subscribe(async (status) => {
@@ -161,12 +164,12 @@ export const fetchWorkspaceFiles = async (workspaceId) => {
 };
 
 // ── Real-time canvas sync ─────────────────────────────────────────────────────
-export const broadcastCanvasUpdate = (nodes) => {
+export const broadcastCanvasUpdate = (nodes, edges) => {
   if (presenceChannel) {
     presenceChannel.send({
       type: 'broadcast',
       event: 'canvas_update',
-      payload: { nodes },
+      payload: { nodes, edges },
     });
   }
 };

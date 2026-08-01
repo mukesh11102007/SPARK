@@ -198,6 +198,9 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
           data: makeNodeData({ label: n.data?.label || 'Component', code: n.data?.code }),
         })));
       }
+      if (payload.edges) {
+        setEdges(payload.edges);
+      }
     });
     return unsub;
   }, [makeNodeData]);
@@ -248,13 +251,32 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
   }, [newGeneratedFiles]);
 
   const onConnect = useCallback((params) => {
-    setEdges(eds => addEdge({
-      ...params,
-      type: 'smoothstep',
-      style: { stroke: '#d1d5db', strokeWidth: 2 },
-    }, eds));
-    broadcastCanvasUpdate(nodes);
+    setEdges(eds => {
+      const newEdges = addEdge({
+        ...params,
+        type: 'smoothstep',
+        style: { stroke: '#d1d5db', strokeWidth: 2 },
+      }, eds);
+      broadcastCanvasUpdate(nodes, newEdges);
+      return newEdges;
+    });
   }, [setEdges, nodes]);
+
+  const onNodesDelete = useCallback((deleted) => {
+    setNodes(nds => {
+      const remainingNodes = nds.filter(n => !deleted.find(d => d.id === n.id));
+      broadcastCanvasUpdate(remainingNodes, edges);
+      return remainingNodes;
+    });
+  }, [nodes, edges, setNodes]);
+
+  const onEdgesDelete = useCallback((deleted) => {
+    setEdges(eds => {
+      const remainingEdges = eds.filter(e => !deleted.find(d => d.id === e.id));
+      broadcastCanvasUpdate(nodes, remainingEdges);
+      return remainingEdges;
+    });
+  }, [nodes, edges, setEdges]);
 
   const isDark = theme === 'antigravity';
 
@@ -265,8 +287,10 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onNodesDelete={onNodesDelete}
+        onEdgesDelete={onEdgesDelete}
         onConnect={onConnect}
-        onNodeDragStop={(_, __, allNodes) => broadcastCanvasUpdate(allNodes)}
+        onNodeDragStop={(_, __, allNodes) => broadcastCanvasUpdate(allNodes, edges)}
         nodeTypes={nodeTypes}
         colorMode={isDark ? 'dark' : 'light'}
         style={{

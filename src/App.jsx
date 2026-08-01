@@ -14,6 +14,8 @@ import { provisionUserDatabase, fetchWorkspaceDatabase } from './services/Databa
 import sdk from '@stackblitz/sdk';
 import { FastPreviewIframe } from './components/FastPreviewIframe';
 import { deployProject } from './services/DeployService';
+import { AuthModal } from './components/AuthModal';
+import { CodeEditor } from './components/CodeEditor';
 
 // ── Sidebar sub-components ─────────────────────────────────────────────────────
 
@@ -230,16 +232,132 @@ const ActionsPanel = ({ onSimulateCrash }) => {
   );
 };
 
-const SettingsPanel = ({ currentTheme, setTheme }) => (
-  <div className="sidebar-section">
-    <h3>THEME</h3>
-    <select className="ide-input" value={currentTheme} onChange={(e) => setTheme(e.target.value)}>
-      <option value="antigravity">Antigravity Dark</option>
-      <option value="classic">VS Code Classic</option>
-      <option value="light">Light Mode</option>
-    </select>
-  </div>
-);
+const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId }) => {
+  const [workspaceMembers, setWorkspaceMembers] = React.useState([]);
+  const [loadingMembers, setLoadingMembers] = React.useState(false);
+
+  React.useEffect(() => {
+    const fetchMembers = async () => {
+      const token = localStorage.getItem('spark_token');
+      if (!token) return;
+      setLoadingMembers(true);
+      try {
+        const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}/members`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) setWorkspaceMembers(await res.json());
+      } catch (e) {
+        console.error('Failed to fetch members', e);
+      } finally {
+        setLoadingMembers(false);
+      }
+    };
+    fetchMembers();
+  }, [workspaceId]);
+
+  const handleRoleChange = async (targetUserId, newRole) => {
+    const token = localStorage.getItem('spark_token');
+    if (!token) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}/member`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ targetUserId, role: newRole })
+      });
+      if (res.ok) {
+        setWorkspaceMembers(prev => prev.map(m => m.id === targetUserId ? { ...m, role: newRole } : m));
+      } else {
+        alert('Failed to update role. You might not be the owner.');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const isOwner = workspaceMembers.find(m => m.email === identity?.email)?.role === 'owner';
+
+  return (
+    <div>
+      <div className="sidebar-section">
+        <h3>ACCOUNT</h3>
+        <div style={{ marginBottom: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: '50%',
+              background: identity?.color || 'var(--vscode-accent)', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '1rem', fontWeight: 700
+            }}>
+              {identity?.initials || 'U'}
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--vscode-text)' }}>{identity?.name}</div>
+              <div style={{ fontSize: '0.75rem', color: '#888' }}>{identity?.email}</div>
+            </div>
+          </div>
+          {identity?.developerType && (
+            <div style={{ fontSize: '0.75rem', padding: '4px 8px', background: 'var(--glass-bg)', display: 'inline-block', borderRadius: '4px', color: 'var(--vscode-accent)', fontWeight: 600 }}>
+              {identity.developerType === 'technical' ? 'Developer' : 'Non-Technical'}
+            </div>
+          )}
+        </div>
+        <button 
+          className="ide-btn ide-btn-secondary" 
+          style={{ width: '100%', marginTop: '5px' }}
+          onClick={onLogout}
+        >
+          Sign Out
+        </button>
+      </div>
+
+      <div className="sidebar-section">
+        <h3>WORKSPACE MEMBERS</h3>
+        {loadingMembers ? (
+          <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Loading members...</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+            {workspaceMembers.map(m => (
+              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: '8px', borderRadius: '6px' }}>
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{m.name} {m.email === identity?.email && '(You)'}</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>{m.email}</div>
+                </div>
+                {isOwner && m.email !== identity?.email ? (
+                  <select 
+                    className="ide-input" 
+                    style={{ width: 'auto', padding: '4px', marginBottom: 0, fontSize: '0.75rem' }}
+                    value={m.role} 
+                    onChange={e => handleRoleChange(m.id, e.target.value)}
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                    <option value="owner">Owner</option>
+                  </select>
+                ) : (
+                  <div style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', textTransform: 'capitalize' }}>
+                    {m.role}
+                  </div>
+                )}
+              </div>
+            ))}
+            {workspaceMembers.length === 0 && (
+              <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Only you are in this workspace.</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="sidebar-section">
+        <h3>THEME</h3>
+        <select className="ide-input" value={currentTheme} onChange={(e) => setTheme(e.target.value)}>
+          <option value="antigravity">Antigravity Dark</option>
+          <option value="classic">VS Code Classic</option>
+          <option value="light">Light Mode</option>
+        </select>
+      </div>
+    </div>
+  );
+};
 
 
 // ── Shared helper: build StackBlitz file payload from generated files ────────
@@ -278,7 +396,7 @@ const buildProjectFiles = (generatedFiles) => {
 
 // ── Deploy Button — Lovable-style: SPARK owns the Vercel token, users just click Share ──
 
-const ShareButton = ({ generatedFiles, projectName }) => {
+const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
   const { runAutomation } = useAutomation();
   const [status, setStatus] = useState('idle'); // 'idle' | 'deploying' | 'done' | 'error'
   const [link, setLink] = useState(null);
@@ -289,7 +407,7 @@ const ShareButton = ({ generatedFiles, projectName }) => {
     setStatus('deploying');
     setErrorMsg('');
     try {
-      const url = await deployProject(generatedFiles, projectName || 'spark-app');
+      const url = await deployProject(generatedFiles, projectName || 'spark-app', workspaceId);
       setLink(url);
       setStatus('done');
       runAutomation('deployment', { url, timestamp: Date.now() });
@@ -371,8 +489,9 @@ function App() {
   const [generatedFiles, setGeneratedFiles] = useState(null);
   const [manualFile, setManualFile] = useState(null);
   const [wcBooted, setWcBooted] = useState(false);
-  const [activeTab, setActiveTab] = useState('terminal');
+  const [activeTab, setActiveTab] = useState('ai builder');
   const [activeActivity, setActiveActivity] = useState('explorer');
+  const [activeSourceFile, setActiveSourceFile] = useState(null);
   const [theme, setTheme] = useState('light');
   const [wcCrashLog, setWcCrashLog] = useState(null);
   const [terminalLogs, setTerminalLogs] = useState([]);
@@ -404,7 +523,10 @@ function App() {
   const [isReviewing, setIsReviewing] = useState(false);
 
   // ── Team / Presence state ──────────────────────────────────────────────────
-  const [identity, setIdentity] = useState(() => getOrCreateUserIdentity());
+  const [identity, setIdentity] = useState(() => {
+    const saved = localStorage.getItem('spark_user');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [members, setMembers] = useState([]);
   const [inviteToast, setInviteToast] = useState(false);
 
@@ -413,13 +535,24 @@ function App() {
     if (!identity) return;
     const workspaceId = getOrCreateWorkspaceId();
 
-    // Fetch historical workspace files from logs table for late joiners
+    // Fetch historical workspace files from Supabase logs table for late joiners
     fetchWorkspaceFiles(workspaceId).then(files => {
       if (files && Object.keys(files).length > 0) {
         setGeneratedFiles(files);
+        setTeamFiles(files);
         logActivity(`Fetched ${Object.keys(files).length} files from team workspace history.`);
+      } else {
+        setTeamFiles({});
       }
     });
+
+    // Load Personal Files from Local Storage
+    const savedPersonal = localStorage.getItem('spark_personal_files');
+    if (savedPersonal) {
+      try {
+        setPersonalFiles(JSON.parse(savedPersonal));
+      } catch (e) {}
+    }
 
     window.__sparkOnRemoteCodeGenerated = (files) => {
       setGeneratedFiles(prev => ({ ...prev, ...files }));
@@ -461,14 +594,21 @@ function App() {
     });
   };
 
-  const handleApplyToCanvas = (files) => {
+  const handleApplyToCanvas = async (files) => {
     setGeneratedFiles(files);
     setPendingReview(null);
     setWcCrashLog(null);
     logActivity(`${identity?.name || 'You'} applied to canvas: ${Object.keys(files).join(', ')}`);
-    if (identity) {
-      const workspaceId = getOrCreateWorkspaceId();
-      broadcastCodeGenerated(workspaceId, files);
+    
+    if (workspaceType === 'personal') {
+      const newPersonal = { ...personalFiles, ...files };
+      setPersonalFiles(newPersonal);
+      localStorage.setItem('spark_personal_files', JSON.stringify(newPersonal));
+    } else {
+      if (identity) {
+        const workspaceId = getOrCreateWorkspaceId();
+        broadcastCodeGenerated(workspaceId, files);
+      }
     }
   };
 
@@ -553,7 +693,21 @@ function App() {
   };
 
   const renderSidebar = () => {
-    if (activeActivity === 'settings') return <SettingsPanel currentTheme={theme} setTheme={setTheme} />;
+    if (activeActivity === 'settings') {
+      return (
+        <SettingsPanel 
+          currentTheme={theme} 
+          setTheme={setTheme} 
+          identity={identity}
+          workspaceId={getOrCreateWorkspaceId()}
+          onLogout={() => {
+            localStorage.removeItem('spark_user');
+            localStorage.removeItem('spark_token');
+            setIdentity(null);
+          }}
+        />
+      );
+    }
     if (activeActivity === 'preview') return (
       <div className="sidebar-section">
         <h3>LIVE PREVIEW</h3>
@@ -564,7 +718,38 @@ function App() {
         </p>
       </div>
     );
-    if (activeActivity === 'source') return <div className="sidebar-section"><p style={{ opacity: 0.4, fontSize: '0.8rem' }}>Source control not yet implemented.</p></div>;
+    if (activeActivity === 'source') {
+      const files = generatedFiles || {};
+      const fileKeys = Object.keys(files);
+      if (fileKeys.length > 0 && !activeSourceFile) {
+        setActiveSourceFile(fileKeys[0]);
+      }
+      return (
+        <div className="sidebar-section">
+          <h3>SOURCE FILES</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '10px' }}>
+            {fileKeys.length === 0 && <p style={{ opacity: 0.5, fontSize: '0.8rem' }}>No files generated yet.</p>}
+            {fileKeys.map(file => (
+              <div 
+                key={file}
+                onClick={() => setActiveSourceFile(file)}
+                style={{
+                  padding: '6px 10px',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  borderRadius: '4px',
+                  background: activeSourceFile === file ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
+                  color: activeSourceFile === file ? 'var(--vscode-accent)' : 'var(--vscode-text)',
+                  borderLeft: activeSourceFile === file ? '3px solid var(--vscode-accent)' : '3px solid transparent'
+                }}
+              >
+                📄 {file}
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
     return (
       <>
         <FileExplorer onAddFile={handleAddManualFile} />
@@ -587,14 +772,17 @@ function App() {
     );
   };
 
-  const activityIcons = [
+  const isNonTech = identity?.developerType === 'non-technical';
+
+  const activities = [
     { id: 'explorer', icon: '📄' },
     { id: 'preview', icon: '👁️' },
-    { id: 'source', icon: '🌿' },
+    ...(isNonTech ? [] : [{ id: 'source', icon: '🌿' }]),
+    { id: 'settings', icon: '⚙️' }
   ];
 
   if (!identity) {
-    return <UserIdentityModal onIdentitySet={setIdentity} />;
+    return <AuthModal onLogin={setIdentity} />;
   }
 
   return (
@@ -603,14 +791,16 @@ function App() {
 
         {/* Activity Bar */}
         <div className="activity-bar">
-          {activityIcons.map(({ id, icon }) => (
-            <div key={id} className={`activity-icon ${activeActivity === id ? 'active' : ''}`} onClick={() => setActiveActivity(id)}>{icon}</div>
+          {activities.map(({ id, icon }) => (
+            <div 
+              key={id} 
+              className={`activity-icon ${activeActivity === id ? 'active' : ''}`} 
+              onClick={() => setActiveActivity(id)}
+              style={id === 'settings' ? { marginTop: 'auto', marginBottom: '10px' } : {}}
+            >
+              {icon}
+            </div>
           ))}
-          <div
-            className={`activity-icon ${activeActivity === 'settings' ? 'active' : ''}`}
-            style={{ marginTop: 'auto', marginBottom: '10px' }}
-            onClick={() => setActiveActivity('settings')}
-          >⚙️</div>
         </div>
 
         <ErrorBoundaryWrapper>
@@ -646,6 +836,20 @@ function App() {
                   <option value="personal">Personal Workspace</option>
                   <option value="team">Team Workspace</option>
                 </select>
+                {workspaceType === 'team' && generatedFiles && Object.keys(generatedFiles).length > 0 && (
+                  <button 
+                    className="ide-btn" 
+                    style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.75rem', height: '24px', background: 'transparent', border: '1px solid var(--vscode-border)', color: 'var(--vscode-text)' }}
+                    title="Copy Team files to Personal Workspace"
+                    onClick={() => {
+                      setPersonalFiles({...generatedFiles});
+                      setTeamFiles(generatedFiles);
+                      setWorkspaceType('personal');
+                    }}
+                  >
+                    Copy to Personal
+                  </button>
+                )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {/* Notion-style avatar cluster */}
@@ -685,7 +889,7 @@ function App() {
                   ))}
                 </div>
                 <div style={{ width: 1, height: 18, background: 'var(--vscode-border)', margin: '0 4px' }} />
-                <ShareButton generatedFiles={generatedFiles} projectName={appProjectName} />
+                <ShareButton generatedFiles={generatedFiles} projectName={appProjectName} workspaceId={getOrCreateWorkspaceId()} />
                 <button className="ide-btn premium-btn invite-btn" onClick={handleInvite}>
                   {inviteToast ? 'Copied' : 'Invite'}
                 </button>
@@ -693,8 +897,17 @@ function App() {
             </div>
 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-              {/* Canvas Editor OR Full Preview */}
-              {activeActivity === 'preview' ? (
+              {/* Canvas Editor OR Full Preview OR Source Full Screen */}
+              {activeActivity === 'source' ? (
+                <div style={{ flex: 1, width: '100%', height: '100%' }}>
+                  <CodeEditor 
+                    files={generatedFiles} 
+                    onFilesChange={setGeneratedFiles} 
+                    theme={theme} 
+                    activeFile={activeSourceFile}
+                  />
+                </div>
+              ) : activeActivity === 'preview' ? (
                 <div style={{ flex: 1, height: '100%', background: '#fff' }}>
                   <FastPreviewIframe generatedFiles={generatedFiles} />
                 </div>
@@ -705,10 +918,10 @@ function App() {
               )}
             </div>
 
-            {/* Bottom Terminal Panel */}
+            {/* Bottom Terminal Panel (Hidden entirely if non-technical, unless AI builder needs it) */}
             <div className="bottom-panel" style={{ display: 'flex', flexDirection: 'column' }}>
               <div className="panel-header">
-                {['ai builder', 'terminal', 'output'].map(t => (
+                {(isNonTech ? ['ai builder'] : ['ai builder', 'terminal', 'output']).map(t => (
                   <span key={t}
                     style={{ cursor: 'pointer', textTransform: 'uppercase', color: activeTab === t ? 'var(--vscode-text)' : '#555', borderBottom: activeTab === t ? '1px solid var(--vscode-accent)' : 'none', paddingBottom: '2px' }}
                     onClick={() => setActiveTab(t)}>

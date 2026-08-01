@@ -1,39 +1,30 @@
 :root {
-  --vscode-bg: #0d0d12;
-  --vscode-sidebar: #12121a;
-  --vscode-activity-bar: #09090c;
-  --vscode-border: #1e1e28;
-  --vscode-text: #cccccc;
-  --vscode-accent: #6c5ce7;
-  --vscode-accent-hover: #5a4bcf;
-  --vscode-panel-bg: #0d0d12;
-  --vscode-header: #12121a;
+  --vscode-bg: #0f172a;
+  --vscode-sidebar: rgba(15, 23, 42, 0.6);
+  --vscode-activity-bar: rgba(2, 6, 23, 0.7);
+  --vscode-border: rgba(255, 255, 255, 0.1);
+  --vscode-text: #f8fafc;
+  --vscode-accent: #6366f1;
+  --vscode-accent-hover: #4f46e5;
+  --vscode-panel-bg: rgba(15, 23, 42, 0.5);
+  --vscode-header: rgba(15, 23, 42, 0.6);
   --font-family: 'Consolas', 'Courier New', monospace;
   --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
-[data-theme="classic"] {
-  --vscode-bg: #1e1e1e;
-  --vscode-sidebar: #252526;
-  --vscode-activity-bar: #333333;
-  --vscode-border: #3c3c3c;
-  --vscode-text: #cccccc;
-  --vscode-accent: #007acc;
-  --vscode-accent-hover: #005f9e;
-  --vscode-panel-bg: #1e1e1e;
-  --vscode-header: #2d2d2d;
+  --glass-blur: blur(12px);
+  --glass-bg: rgba(255, 255, 255, 0.05);
 }
 
 [data-theme="light"] {
-  --vscode-bg: #ffffff;
-  --vscode-sidebar: #f3f3f3;
-  --vscode-activity-bar: #2c2c2c;
-  --vscode-border: #e0e0e0;
-  --vscode-text: #333333;
-  --vscode-accent: #007acc;
-  --vscode-accent-hover: #005f9e;
-  --vscode-panel-bg: #f3f3f3;
-  --vscode-header: #ececec;
+  --vscode-bg: #f8fafc;
+  --vscode-sidebar: rgba(255, 255, 255, 0.7);
+  --vscode-activity-bar: rgba(241, 245, 249, 0.8);
+  --vscode-border: rgba(0, 0, 0, 0.1);
+  --vscode-text: #0f172a;
+  --vscode-accent: #3b82f6;
+  --vscode-accent-hover: #2563eb;
+  --vscode-panel-bg: rgba(255, 255, 255, 0.6);
+  --vscode-header: rgba(241, 245, 249, 0.7);
+  --glass-bg: rgba(0, 0, 0, 0.03);
 }
 
 * {
@@ -44,28 +35,35 @@
 
 body {
   font-family: var(--font-ui);
-  background-color: var(--vscode-bg);
+  background: linear-gradient(135deg, var(--vscode-bg) 0%, #1e1b4b 100%);
+  background-attachment: fixed;
   color: var(--vscode-text);
   height: 100vh;
   overflow: hidden;
-  transition: background-color 0.3s, color 0.3s;
+  transition: background 0.3s, color 0.3s;
+}
+[data-theme="light"] body {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0e7ff 100%);
 }
 
 .ide-layout {
   display: flex;
   height: 100vh;
   width: 100vw;
+  background: transparent;
 }
 
 /* Activity Bar */
 .activity-bar {
-  width: 50px;
+  width: 55px;
   background-color: var(--vscode-activity-bar);
+  backdrop-filter: var(--glass-blur);
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 10px;
+  padding-top: 15px;
   border-right: 1px solid var(--vscode-border);
+  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
 }
 
 .activity-icon {
@@ -86,12 +84,14 @@ body {
 
 /* Sidebar (Explorer) */
 .ide-sidebar {
-  width: 300px;
+  width: 320px;
   background-color: var(--vscode-sidebar);
+  backdrop-filter: var(--glass-blur);
   border-right: 1px solid var(--vscode-border);
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  box-shadow: 2px 0 15px rgba(0,0,0,0.05);
 }
 
 .ide-sidebar-header {
@@ -126,15 +126,18 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background-color: var(--vscode-bg);
+  background: transparent;
 }
 
 /* Editor Tabs */
 .editor-tabs {
-  height: 35px;
+  height: 45px;
   background-color: var(--vscode-header);
+  backdrop-filter: var(--glass-blur);
   display: flex;
   border-bottom: 1px solid var(--vscode-border);
+  align-items: center;
+  padding: 0 10px;
 }
 .tab {
   padding: 0 15px;
@@ -157,11 +160,13 @@ body {
 
 /* Bottom Panel (Terminal/Execution) */
 .bottom-panel {
-  height: 250px;
+  height: 280px;
   border-top: 1px solid var(--vscode-border);
   background-color: var(--vscode-panel-bg);
+  backdrop-filter: var(--glass-blur);
   display: flex;
   flex-direction: column;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
 }
 .panel-header {
   height: 35px;
@@ -184,37 +189,39 @@ body {
 
 /* UI Elements */
 .ide-btn {
-  background-color: transparent;
-  color: var(--vscode-accent);
-  border: 1px solid var(--vscode-accent);
-  border-radius: 4px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
+  background: linear-gradient(135deg, var(--vscode-accent) 0%, var(--vscode-accent-hover) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
   cursor: pointer;
   width: 100%;
   margin-top: 5px;
-  transition: all 0.2s;
-  font-weight: 500;
+  transition: all 0.3s ease;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
 }
-.ide-btn:hover { background-color: rgba(108, 92, 231, 0.1); }
-.ide-btn-secondary { color: #f14c4c; border-color: #f14c4c; }
-.ide-btn-secondary:hover { background-color: rgba(241, 76, 76, 0.1); }
-.ide-btn-icon { width: auto; padding: 2px 6px; font-size: 0.9rem; border: none; background: transparent; color: var(--vscode-text); opacity: 0.6; }
-.ide-btn-icon:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+.ide-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4); }
+.ide-btn-secondary { background: transparent; border: 1px solid #f14c4c; color: #f14c4c; box-shadow: none; }
+.ide-btn-secondary:hover { background-color: rgba(241, 76, 76, 0.1); transform: none; box-shadow: none; }
+.ide-btn-icon { width: auto; padding: 4px 8px; font-size: 0.9rem; border: none; background: transparent; color: var(--vscode-text); opacity: 0.7; box-shadow: none; }
+.ide-btn-icon:hover { opacity: 1; background: var(--glass-bg); transform: none; box-shadow: none; }
 
 .ide-input {
   width: 100%;
-  background-color: rgba(0,0,0,0.2);
+  background-color: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
   color: var(--vscode-text);
   border: 1px solid var(--vscode-border);
-  padding: 8px;
-  font-size: 0.8rem;
+  padding: 10px 12px;
+  font-size: 0.85rem;
   outline: none;
-  border-radius: 4px;
-  margin-bottom: 5px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
 }
-.ide-input:focus { border-color: var(--vscode-accent); }
-[data-theme="light"] .ide-input { background-color: #fff; }
+.ide-input:focus { border-color: var(--vscode-accent); box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2); }
 
 /* Dashboard List */
 .dashboard-list {

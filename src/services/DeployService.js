@@ -102,7 +102,7 @@ const buildStandaloneHtml = (filesMap, projectName) => {
 </html>`;
 };
 
-export const deployProject = async (filesMap, projectName = 'spark-app') => {
+export const deployProject = async (filesMap, projectName = 'spark-app', workspaceId = '') => {
   if (!filesMap || Object.keys(filesMap).length === 0) {
     throw new Error('No files to deploy. Generate a component first.');
   }
@@ -110,7 +110,9 @@ export const deployProject = async (filesMap, projectName = 'spark-app') => {
   const token = import.meta.env.VITE_VERCEL_TOKEN;
   if (!token) throw new Error('No deployment token configured. Contact SPARK support.');
 
-  const cleanName = (projectName || 'spark-app')
+  const baseName = projectName || 'spark-app';
+  const suffix = workspaceId ? `-${workspaceId.split('-')[0]}` : '';
+  const cleanName = `${baseName}${suffix}`
     .toLowerCase()
     .replace(/[^a-z0-9-]/g, '-')
     .replace(/--+/g, '-')
