@@ -1346,8 +1346,7 @@ function App() {
   const activities = [
     { id: 'explorer', icon: '📄' },
     { id: 'preview', icon: '👁️' },
-    { id: 'source', icon: '🌿' },
-    { id: 'settings', icon: '⚙️' }
+    { id: 'source', icon: '🌿' }
   ];
 
   if (!identity) {
@@ -1357,6 +1356,7 @@ function App() {
   if (currentView === 'dashboard') {
     return <Dashboard 
       identity={identity} 
+      setIdentity={setIdentity}
       members={members}
       onOpenWorkspace={(type, options = {}) => {
         if (type === 'new') {

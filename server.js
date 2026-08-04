@@ -21,6 +21,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   name: { type: String, required: true },
   developerType: { type: String, enum: ['technical', 'non-technical'], required: true },
+  avatarUrl: { type: String, default: '' },
 });
 const User = mongoose.model('User', userSchema);
 
@@ -64,7 +65,7 @@ app.post('/api/auth/register', async (req, res) => {
     await user.save();
     
     const token = jwt.sign({ id: user._id }, JWT_SECRET);
-    res.json({ token, user: { id: user._id, name, email, developerType } });
+    res.json({ token, user: { id: user._id, name, email, developerType, avatarUrl: user.avatarUrl } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -80,7 +81,23 @@ app.post('/api/auth/login', async (req, res) => {
     if (!validPass) return res.status(400).json({ error: 'Invalid password' });
     
     const token = jwt.sign({ id: user._id }, JWT_SECRET);
-    res.json({ token, user: { id: user._id, name: user.name, email: user.email, developerType: user.developerType } });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email, developerType: user.developerType, avatarUrl: user.avatarUrl } });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/user/profile', auth, async (req, res) => {
+  try {
+    const { name, bio, avatarUrl } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    if (name) user.name = name;
+    if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+    
+    await user.save();
+    res.json({ success: true, user: { id: user._id, name: user.name, email: user.email, developerType: user.developerType, avatarUrl: user.avatarUrl } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -92,6 +109,13 @@ app.get('/api/workspace/:id', auth, async (req, res) => {
     if (!workspace) {
       workspace = new Workspace({ workspaceId: req.params.id, ownerId: req.user.id, members: [{ userId: req.user.id, role: 'owner' }] });
       await workspace.save();
+    } else {
+      // Add current user to members if not already present
+      const isMember = workspace.members.some(m => m.userId.toString() === req.user.id);
+      if (!isMember) {
+        workspace.members.push({ userId: req.user.id, role: 'member' });
+        await workspace.save();
+      }
     }
     res.json(workspace);
   } catch (err) {
@@ -117,13 +141,14 @@ app.post('/api/workspace/:id', auth, async (req, res) => {
 
 app.get('/api/workspace/:id/members', auth, async (req, res) => {
   try {
-    let workspace = await Workspace.findOne({ workspaceId: req.params.id }).populate('members.userId', 'name email developerType');
+    let workspace = await Workspace.findOne({ workspaceId: req.params.id }).populate('members.userId', 'name email developerType avatarUrl');
     if (!workspace) return res.json([]);
     res.json(workspace.members.map(m => ({
       id: m.userId._id,
       name: m.userId.name,
       email: m.userId.email,
       developerType: m.userId.developerType,
+      avatarUrl: m.userId.avatarUrl,
       role: m.role
     })));
   } catch (err) {
@@ -140,11 +165,18 @@ app.put('/api/workspace/:id/member', auth, async (req, res) => {
     const isOwner = workspace.members.some(m => m.userId.toString() === req.user.id && m.role === 'owner');
     if (!isOwner) return res.status(403).json({ error: 'Only owners can manage members' });
 
-    const memberIndex = workspace.members.findIndex(m => m.userId.toString() === targetUserId);
+    let actualTargetId = targetUserId;
+    if (targetUserId.includes('@')) {
+      const targetUser = await User.findOne({ email: targetUserId });
+      if (!targetUser) return res.status(404).json({ error: 'Target user not found' });
+      actualTargetId = targetUser._id.toString();
+    }
+
+    const memberIndex = workspace.members.findIndex(m => m.userId.toString() === actualTargetId);
     if (memberIndex > -1) {
       workspace.members[memberIndex].role = role;
     } else {
-      workspace.members.push({ userId: targetUserId, role });
+      workspace.members.push({ userId: actualTargetId, role });
     }
     
     await workspace.save();

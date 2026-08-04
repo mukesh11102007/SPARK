@@ -202,12 +202,47 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     };
   }, []);
 
-  const handleRoleChange = (memberKey, newRole) => {
+  const [dbMembers, setDbMembers] = React.useState([]);
+  
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const workspaceId = params.get('workspace');
+    if (!workspaceId) return;
+
+    const fetchMembers = async () => {
+      const token = localStorage.getItem('spark_token');
+      if (!token) return;
+      try {
+        const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}/members`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) setDbMembers(await res.json());
+      } catch (e) { console.error('Failed to fetch DB members', e); }
+    };
+    fetchMembers();
+  }, [membersTab]);
+
+  const handleRoleChange = async (memberKey, newRole) => {
+    // Optimistic update
     setMemberRoles(prev => {
       const updated = { ...prev, [memberKey]: newRole };
       localStorage.setItem('spark_member_roles', JSON.stringify(updated));
       return updated;
     });
+
+    const params = new URLSearchParams(window.location.search);
+    const workspaceId = params.get('workspace');
+    if (workspaceId) {
+      try {
+        const token = localStorage.getItem('spark_token');
+        await fetch(`http://localhost:3001/api/workspace/${workspaceId}/member`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ targetUserId: memberKey, role: newRole === 'Viewer' ? 'member' : (newRole === 'Admin' ? 'admin' : 'member') }) // Mapping to backend roles roughly
+        });
+      } catch (e) { console.error('Failed to update role on backend', e); }
+    }
+
     import('../services/SupabaseService').then(({ broadcastRoleUpdate }) => {
       broadcastRoleUpdate(memberKey, newRole);
     });
@@ -226,11 +261,26 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     }
   }, [identity]);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     const updated = { ...identity, ...profileForm };
     if (profileForm.name) {
       updated.initials = profileForm.name.substring(0, 2).toUpperCase();
     }
+    
+    // Save to backend
+    try {
+      const token = localStorage.getItem('spark_token');
+      if (token) {
+        await fetch('http://localhost:3001/api/user/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ name: profileForm.name, bio: profileForm.bio, avatarUrl: profileForm.avatarUrl })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save profile to backend', e);
+    }
+    
     localStorage.setItem('spark_identity', JSON.stringify(updated));
     localStorage.setItem('spark_user', JSON.stringify(updated));
     if (setIdentity) setIdentity(updated);
@@ -507,15 +557,46 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           {membersTab === 'Members' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--panel-border)', border: '1px solid var(--panel-border)', borderRadius: '12px', overflow: 'hidden' }}>
               {(() => {
-                const amIOwner = (identity?.email === workspaceOwnerEmail) || (identity?.name && identity.name.toLowerCase() === 'mk') || (identity?.email === 'gm233097@gmail.com');
+                const actualOwnerEmail = workspaceOwnerEmail || identity?.email;
+                const amIOwner = identity?.email === actualOwnerEmail;
 
-                const memberList = members.length > 0 ? members : [
-                  { id: 'owner-1', name: 'mk', email: 'gm233097@gmail.com', initials: 'MK', color: '#4D3DF7', isCreator: true },
-                  { id: 'mem-1', name: 'MUKESH G', email: 'mukesh710017@gmail.com', initials: 'MU', color: '#10B981' }
-                ];
+                // Ensure the current user is ALWAYS in the list, even if presence hasn't synced yet
+                const memberList = members.length > 0 ? [...members] : [];
+                if (!memberList.some(m => m.email === identity?.email)) {
+                  memberList.push(identity);
+                }
 
-                return memberList.map((m, i) => {
-                  const isOwnerUser = m.isCreator || (m.email && m.email === workspaceOwnerEmail) || (m.name && m.name.toLowerCase() === 'mk') || m.email === 'gm233097@gmail.com';
+                // Add persistent database members
+                dbMembers.forEach(dbm => {
+                  if (!memberList.some(m => m.email === dbm.email)) {
+                    memberList.push({
+                      id: dbm.id,
+                      name: dbm.name,
+                      email: dbm.email,
+                      avatarUrl: dbm.avatarUrl,
+                      initials: dbm.name ? dbm.name.substring(0, 2).toUpperCase() : 'U'
+                    });
+                  }
+                  // Prefill role if it came from DB and is not owner
+                  if (dbm.role === 'admin' && !memberRoles[dbm.id] && !memberRoles[dbm.email]) {
+                    memberRoles[dbm.id] = 'Admin';
+                  } else if (dbm.role === 'member' && !memberRoles[dbm.id] && !memberRoles[dbm.email]) {
+                    memberRoles[dbm.id] = 'Viewer';
+                  }
+                });
+
+                // Deduplicate by email just in case
+                const uniqueMembers = [];
+                const seenEmails = new Set();
+                memberList.forEach(m => {
+                  if (m.email && !seenEmails.has(m.email)) {
+                    seenEmails.add(m.email);
+                    uniqueMembers.push(m);
+                  }
+                });
+
+                return uniqueMembers.map((m, i) => {
+                  const isOwnerUser = m.isCreator || (m.email && m.email === actualOwnerEmail) || (dbMembers.find(d => d.email === m.email)?.role === 'owner');
                   const isYou = identity?.email === m.email || (identity?.name && identity.name === m.name);
                   const memberKey = m.id || m.email || `mem-${i}`;
                   const currentRole = isOwnerUser ? 'Owner' : (memberRoles[memberKey] || 'Editor');
@@ -1162,6 +1243,22 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{identity?.email || 'user@example.com'}</div>
           </div>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+        
+        <div style={{ padding: '0 24px 24px' }}>
+          <button 
+            style={{ width: '100%', padding: '8px', background: 'transparent', border: '1px solid var(--panel-border)', borderRadius: '6px', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.borderColor = '#ef4444'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--panel-border)'; }}
+            onClick={() => {
+              localStorage.removeItem('spark_token');
+              localStorage.removeItem('spark_identity');
+              localStorage.removeItem('spark_user');
+              setIdentity(null);
+            }}
+          >
+            Sign Out
+          </button>
         </div>
       </div>
 
