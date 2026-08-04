@@ -16,6 +16,7 @@ import { FastPreviewIframe } from './components/FastPreviewIframe';
 import { deployProject } from './services/DeployService';
 import { AuthModal } from './components/AuthModal';
 import { CodeEditor } from './components/CodeEditor';
+import { Dashboard } from './components/Dashboard';
 
 // ── Sidebar sub-components ─────────────────────────────────────────────────────
 
@@ -89,8 +90,14 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
   const cookingMessages = ['🍳 Cooking up your app...', '🔥 Firing up the grill...', '✨ Sprinkling some magic...', '🤖 Teaching the robots...', '🚀 Prepping for launch...'];
 
   const processInput = async (input, isEnhance = false) => {
-    if (!input.trim()) return;
-    if (!projectName.trim()) { alert('Please enter a project name first!'); return; }
+    const finalInput = (input || textInput).trim() || projectName.trim();
+    if (!finalInput) { alert('Please enter what you want to build!'); return; }
+
+    let finalProjectName = projectName.trim();
+    if (!finalProjectName) {
+      finalProjectName = finalInput.length > 20 ? finalInput.substring(0, 20) + '...' : finalInput;
+      setProjectName(finalProjectName);
+    }
 
     if (isEnhance && (!generatedFiles || Object.keys(generatedFiles).length === 0)) {
       alert('Please Build an app first before enhancing!');
@@ -103,20 +110,18 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
     try {
       let code;
       if (isEnhance) {
-        // Find the main component code
-        // Find the specific component code
         let mainCode = generatedFiles[selectedFile];
         if (!mainCode) { alert('Selected file not found!'); return; }
 
-        const enhancedCode = await refineAppCode(mainCode, input, projectName.trim(), selectedFile, dbConfig);
+        const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, selectedFile, dbConfig, generatedFiles);
         code = { ...generatedFiles, ...enhancedCode };
       } else {
-        const newCode = await generateAppFromVoice(input, projectName.trim(), dbConfig);
+        const newCode = await generateAppFromVoice(finalInput, finalProjectName, dbConfig);
         code = { ...(generatedFiles || {}), ...newCode };
       }
 
       setStatusMsg(isEnhance ? '✨ Enhancing & reviewing...' : '🔍 Reviewing code before applying...');
-      onAppGenerated(code, input, projectName.trim(), isEnhance);
+      onAppGenerated(code, finalInput, finalProjectName, isEnhance);
       setTextInput('');
       setTimeout(() => setStatusMsg(''), 3000);
     } catch (e) {
@@ -146,7 +151,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         {/* Project Name */}
         <input
           type="text"
-          placeholder="Project Name (e.g. TaskManager)"
+          placeholder="Project Name / Prompt (e.g. build a calculator)"
           className="ide-input"
           value={projectName}
           onChange={(e) => setProjectName(e.target.value)}
@@ -187,15 +192,20 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
             style={{ flex: 1, minWidth: '80px', color: isListening ? '#f14c4c' : '', borderColor: isListening ? '#f14c4c' : '' }}>
             {isListening ? '● Listening' : '🎤 Speak'}
           </button>
-          <button type="submit" className="ide-btn" disabled={busy || !textInput.trim() || !projectName.trim()} style={{ flex: 1, minWidth: '80px', background: busy ? '' : 'var(--vscode-accent)' }}>
+          <button 
+            type="submit" 
+            className="ide-btn" 
+            disabled={busy || (!textInput.trim() && !projectName.trim())} 
+            style={{ flex: 1, minWidth: '80px', background: busy ? '' : 'var(--accent)', cursor: 'pointer' }}
+          >
             {isProcessing && statusMsg && !statusMsg.includes('Enhancing') ? 'Building...' : '⚡ Build'}
           </button>
           <button
             type="button"
             className="ide-btn"
             onClick={() => processInput(textInput, true)}
-            disabled={busy || !textInput.trim() || !projectName.trim() || !generatedFiles || Object.keys(generatedFiles).length === 0}
-            style={{ flex: 1, minWidth: '80px', background: 'transparent', borderColor: 'var(--vscode-accent)', color: 'var(--vscode-accent)' }}
+            disabled={busy || (!textInput.trim() && !projectName.trim()) || !generatedFiles || Object.keys(generatedFiles).length === 0}
+            style={{ flex: 1, minWidth: '80px', background: 'transparent', borderColor: 'var(--accent)', color: 'var(--accent)', cursor: 'pointer' }}
             title="Refine existing code with the prompt above"
           >
             {isProcessing && statusMsg && statusMsg.includes('Enhancing') ? 'Enhancing...' : '✨ Enhance'}
@@ -282,21 +292,25 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
         <h3>ACCOUNT</h3>
         <div style={{ marginBottom: '15px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: identity?.color || 'var(--vscode-accent)', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '1rem', fontWeight: 700
-            }}>
-              {identity?.initials || 'U'}
-            </div>
+            {identity?.avatarUrl ? (
+              <img src={identity.avatarUrl} alt="User" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <div style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: identity?.color || 'var(--accent)', color: '#fff',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1rem', fontWeight: 700
+              }}>
+                {identity?.initials || 'U'}
+              </div>
+            )}
             <div>
-              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--vscode-text)' }}>{identity?.name}</div>
+              <div style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--text-main)' }}>{identity?.name}</div>
               <div style={{ fontSize: '0.75rem', color: '#888' }}>{identity?.email}</div>
             </div>
           </div>
           {identity?.developerType && (
-            <div style={{ fontSize: '0.75rem', padding: '4px 8px', background: 'var(--glass-bg)', display: 'inline-block', borderRadius: '4px', color: 'var(--vscode-accent)', fontWeight: 600 }}>
+            <div style={{ fontSize: '0.75rem', padding: '4px 8px', background: 'var(--glass-bg)', display: 'inline-block', borderRadius: '4px', color: 'var(--accent)', fontWeight: 600 }}>
               {identity.developerType === 'technical' ? 'Developer' : 'Non-Technical'}
             </div>
           )}
@@ -369,13 +383,16 @@ const buildProjectFiles = (generatedFiles) => {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SPARK Generated App</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>`,
-    'package.json': `{\n  "name": "spark-generated-app",\n  "private": true,\n  "version": "0.0.0",\n  "type": "module",\n  "scripts": { "dev": "vite", "build": "vite build" },\n  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0", "lucide-react": "^0.263.1" },\n  "devDependencies": { "@vitejs/plugin-react": "^4.2.1", "vite": "^5.2.0" }\n}`,
+    'package.json': `{\n  "name": "spark-generated-app",\n  "private": true,\n  "version": "0.0.0",\n  "type": "module",\n  "scripts": { "dev": "vite", "build": "vite build" },\n  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0", "lucide-react": "^0.263.1", "@supabase/supabase-js": "^2.42.0" },\n  "devDependencies": { "@vitejs/plugin-react": "^4.2.1", "vite": "^5.2.0" }\n}`,
     'vite.config.js': `import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\nexport default defineConfig({ plugins: [react()] })`,
     'src/main.jsx': `import React from 'react'\nimport ReactDOM from 'react-dom/client'\nimport App from './App.jsx'\nReactDOM.createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>)`,
     'src/App.jsx': `import React from 'react';\nexport default function App() { return <div><h1>Welcome to SPARK</h1><p>Generate a component!</p></div>; }`
@@ -484,32 +501,435 @@ const ErrorBoundaryWrapper = ({ children }) => (
   <ErrorBoundary onAutomationTrigger={() => { }} onAutomationEnd={() => { }}>{children}</ErrorBoundary>
 );
 
+const getTemplateCode = (templateName) => {
+  const name = templateName || '';
+  if (name.includes('Admin') || name.includes('Dashboard')) {
+    return {
+      'App.jsx': `import React, { useState } from 'react';
+
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState('Overview');
+  const stats = [
+    { title: 'Total Revenue', value: '$45,231.89', change: '+20.1%', icon: 'fa-dollar-sign', color: '#10b981' },
+    { title: 'Subscriptions', value: '+2,350', change: '+180.1%', icon: 'fa-users', color: '#6366f1' },
+    { title: 'Sales Volume', value: '+12,234', change: '+19%', icon: 'fa-shopping-cart', color: '#f59e0b' },
+    { title: 'Active Now', value: '+573', change: '+201', icon: 'fa-bolt', color: '#ec4899' }
+  ];
+
+  const recentOrders = [
+    { id: 'ORD-9821', user: 'Olivia Martin', email: 'olivia@email.com', amount: '$1,999.00', status: 'Completed' },
+    { id: 'ORD-9822', user: 'Jackson Lee', email: 'jackson@email.com', amount: '$39.00', status: 'Processing' },
+    { id: 'ORD-9823', user: 'Isabella Nguyen', email: 'isabella@email.com', amount: '$299.00', status: 'Completed' },
+    { id: 'ORD-9824', user: 'William Kim', email: 'will@email.com', amount: '$99.00', status: 'Completed' }
+  ];
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#090d16', color: '#f1f5f9', display: 'flex', fontFamily: 'sans-serif' }}>
+      <div style={{ width: 240, background: '#0f172a', borderRight: '1px solid #1e293b', padding: '24px 16px', display: 'flex', flexDirection: 'column', gap: 24 }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#6366f1', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <i className="fa fa-chart-line" /> AnalyticsOS
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {['Overview', 'Analytics', 'Customers', 'Products', 'Settings'].map(t => (
+            <button key={t} onClick={() => setActiveTab(t)} style={{
+              background: activeTab === t ? '#1e293b' : 'transparent',
+              color: activeTab === t ? '#818cf8' : '#94a3b8',
+              border: 'none', padding: '10px 14px', borderRadius: 8, cursor: 'pointer', textAlign: 'left', fontWeight: 600, fontSize: '0.9rem'
+            }}>
+              {t}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, padding: 32, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 700 }}>{activeTab} Dashboard</h1>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.9rem' }}>Real-time platform updates and metrics</p>
+          </div>
+          <button style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+            + Export Report
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20, marginBottom: 32 }}>
+          {stats.map(s => (
+            <div key={s.title} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.85rem' }}>
+                <span>{s.title}</span>
+                <i className={'fa ' + s.icon} style={{ color: s.color }} />
+              </div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 700, margin: '12px 0 4px' }}>{s.value}</div>
+              <span style={{ fontSize: '0.75rem', color: s.color, fontWeight: 600 }}>{s.change} from last month</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 12, padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px', fontSize: '1.1rem' }}>Recent Orders</h3>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #1e293b', color: '#64748b' }}>
+                <th style={{ padding: 12 }}>Order ID</th>
+                <th style={{ padding: 12 }}>Customer</th>
+                <th style={{ padding: 12 }}>Amount</th>
+                <th style={{ padding: 12 }}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentOrders.map(o => (
+                <tr key={o.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                  <td style={{ padding: 12, color: '#818cf8', fontWeight: 600 }}>{o.id}</td>
+                  <td style={{ padding: 12 }}>
+                    <div>{o.user}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{o.email}</div>
+                  </td>
+                  <td style={{ padding: 12, fontWeight: 600 }}>{o.amount}</td>
+                  <td style={{ padding: 12 }}>
+                    <span style={{ background: o.status === 'Completed' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', color: o.status === 'Completed' ? '#10b981' : '#f59e0b', padding: '4px 10px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 600 }}>
+                      {o.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}`,
+      'README.md': `# Admin Dashboard Template\n\nA full production-ready admin dashboard pre-built with stats, filters, and transaction tables.`
+    };
+  } else if (name.includes('E-Commerce') || name.includes('Store')) {
+    return {
+      'App.jsx': `import React, { useState } from 'react';
+
+export default function StoreApp() {
+  const [cart, setCart] = useState([]);
+  const [cartOpen, setCartOpen] = useState(false);
+
+  const products = [
+    { id: 1, name: 'Cyberpunk Headphones', price: 299, category: 'Audio', image: '🎧' },
+    { id: 2, name: 'Minimalist Mechanical Keyboard', price: 189, category: 'Peripherals', image: '⌨️' },
+    { id: 3, name: 'Ultra-wide Curved Monitor 4K', price: 799, category: 'Displays', image: '🖥️' },
+    { id: 4, name: 'Ergonomic Precision Mouse', price: 99, category: 'Peripherals', image: '🖱️' }
+  ];
+
+  const addToCart = (p) => {
+    setCart(prev => [...prev, p]);
+  };
+
+  const total = cart.reduce((acc, i) => acc + i.price, 0);
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#f8fafc', fontFamily: 'sans-serif' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid #1e293b', background: '#0f172a' }}>
+        <h2 style={{ margin: 0, color: '#10b981', display: 'flex', alignItems: 'center', gap: 10 }}>🛍️ TechStore Pro</h2>
+        <button onClick={() => setCartOpen(true)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
+          🛒 Cart ({cart.length})
+        </button>
+      </header>
+
+      <div style={{ padding: '60px 40px', textAlign: 'center', background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)', borderBottom: '1px solid #1e293b' }}>
+        <h1 style={{ fontSize: '2.5rem', margin: '0 0 12px' }}>Next-Gen Developer Setup Gear</h1>
+        <p style={{ color: '#94a3b8', fontSize: '1.1rem', margin: 0 }}>Elevate your workspace with premium accessories</p>
+      </div>
+
+      <div style={{ padding: 40, maxWidth: 1200, margin: '0 auto' }}>
+        <h3 style={{ fontSize: '1.25rem', marginBottom: 24 }}>Featured Products</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 24 }}>
+          {products.map(p => (
+            <div key={p.id} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+              <div style={{ fontSize: '4rem', marginBottom: 16 }}>{p.image}</div>
+              <h4 style={{ margin: '0 0 8px', fontSize: '1.1rem' }}>{p.name}</h4>
+              <div style={{ color: '#10b981', fontSize: '1.25rem', fontWeight: 700, marginBottom: 16 }}>${p.price}</div>
+              <button onClick={() => addToCart(p)} style={{ width: '100%', background: '#3b82f6', color: '#fff', border: 'none', padding: '10px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+                Add to Cart
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {cartOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', justifyContent: 'flex-end', zIndex: 100 }}>
+          <div style={{ width: 360, background: '#0f172a', height: '100%', padding: 24, display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+              <h3 style={{ margin: 0 }}>Your Cart</h3>
+              <button onClick={() => setCartOpen(false)} style={{ background: 'transparent', color: '#94a3b8', border: 'none', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {cart.length === 0 ? <p style={{ color: '#64748b' }}>Cart is empty</p> : cart.map((item, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid #1e293b' }}>
+                  <span>{item.name}</span>
+                  <span style={{ fontWeight: 600 }}>${item.price}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{ borderTop: '1px solid #1e293b', paddingTop: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 700, marginBottom: 16 }}>
+                <span>Total:</span>
+                <span style={{ color: '#10b981' }}>${total}</span>
+              </div>
+              <button onClick={() => alert('Checkout simulated!')} style={{ width: '100%', background: '#10b981', color: '#fff', border: 'none', padding: 12, borderRadius: 8, fontWeight: 700, cursor: 'pointer' }}>
+                Checkout Now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}`,
+      'README.md': `# E-Commerce Store Template\n\nComplete storefront with shopping cart drawer and price totals.`
+    };
+  } else if (name.includes('Blog')) {
+    return {
+      'App.jsx': `import React, { useState } from 'react';
+
+export default function BlogApp() {
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const posts = [
+    { id: 1, title: 'Building Scalable AI Apps with React & Gemini', category: 'AI & Tech', author: 'Sarah Connor', date: 'Aug 2, 2026', readTime: '5 min read', desc: 'Discover how to integrate LLM endpoints into modern React single page applications.' },
+    { id: 2, title: 'The Future of Web Development in 2027', category: 'Frontend', author: 'Alex Mercer', date: 'Jul 28, 2026', readTime: '8 min read', desc: 'Exploring WebAssembly, server components, and dynamic client compilation.' },
+    { id: 3, title: 'Mastering Supabase Real-Time Data Sync', category: 'Backend', author: 'Elena Rostova', date: 'Jul 20, 2026', readTime: '4 min read', desc: 'A deep dive into PostgreSQL pub/sub channels for collaborative team tools.' }
+  ];
+
+  const filtered = selectedCategory === 'All' ? posts : posts.filter(p => p.category === selectedCategory);
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'sans-serif', padding: '40px 20px' }}>
+      <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <header style={{ borderBottom: '1px solid #30363d', paddingBottom: 24, marginBottom: 32 }}>
+          <h1 style={{ fontSize: '2.5rem', margin: '0 0 8px', color: '#58a6ff' }}>✍️ TechPulse Blog</h1>
+          <p style={{ color: '#8b949e', fontSize: '1.1rem', margin: 0 }}>Articles on AI, Web Architecture, and Distributed Systems</p>
+        </header>
+
+        <div style={{ display: 'flex', gap: 12, marginBottom: 32 }}>
+          {['All', 'AI & Tech', 'Frontend', 'Backend'].map(cat => (
+            <button key={cat} onClick={() => setSelectedCategory(cat)} style={{
+              background: selectedCategory === cat ? '#1f6feb' : '#21262d',
+              color: '#fff', border: 'none', padding: '8px 16px', borderRadius: 20, cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem'
+            }}>
+              {cat}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {filtered.map(post => (
+            <article key={post.id} style={{ background: '#161b22', border: '1px solid #30363d', borderRadius: 12, padding: 24 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', fontSize: '0.8rem', color: '#8b949e', marginBottom: 12 }}>
+                <span style={{ background: 'rgba(88,166,255,0.1)', color: '#58a6ff', padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>{post.category}</span>
+                <span>•</span>
+                <span>{post.readTime}</span>
+              </div>
+              <h2 style={{ margin: '0 0 12px', fontSize: '1.4rem', color: '#f0f6fc' }}>{post.title}</h2>
+              <p style={{ color: '#8b949e', lineHeight: 1.6, margin: '0 0 16px' }}>{post.desc}</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#8b949e' }}>
+                <span>By <strong>{post.author}</strong></span>
+                <span>{post.date}</span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}`,
+      'README.md': `# Blog Platform Template\n\nA full blog layout with category filters and post reader cards.`
+    };
+  } else if (name.includes('Visual') || name.includes('Canvas')) {
+    return {
+      'App.jsx': `import React, { useState } from 'react';
+
+export default function CanvasApp() {
+  const [cards, setCards] = useState([
+    { id: 1, title: 'Feature Alpha', desc: 'Real-time collaborative canvas layout engine built for modern web IDEs.', color: '#10b981' },
+    { id: 2, title: 'Feature Beta', desc: 'Drag and drop components to visually assemble your React applications.', color: '#3b82f6' },
+    { id: 3, title: 'Feature Gamma', desc: 'Instant code generation and multi-user Supabase synchronization.', color: '#8b5cf6' }
+  ]);
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#0a0a0f', color: '#fff', fontFamily: 'sans-serif', display: 'flex', flexDirection: 'column' }}>
+      {/* Navbar Component */}
+      <nav style={{ height: '64px', background: '#13131a', borderBottom: '1px solid #27272a', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4D3DF7', display: 'flex', alignItems: 'center', gap: 10 }}>
+          🎨 Visual Studio Layout
+        </div>
+        <div style={{ display: 'flex', gap: 20, fontSize: '0.9rem', color: '#a1a1aa' }}>
+          <span style={{ cursor: 'pointer', color: '#fff' }}>Home</span>
+          <span style={{ cursor: 'pointer' }}>Features</span>
+          <span style={{ cursor: 'pointer' }}>Documentation</span>
+        </div>
+        <button style={{ background: '#4D3DF7', color: '#fff', border: 'none', padding: '8px 18px', borderRadius: '6px', fontWeight: 600, cursor: 'pointer' }}>
+          Get Started
+        </button>
+      </nav>
+
+      {/* Hero Component */}
+      <section style={{ padding: '80px 32px', background: 'radial-gradient(circle at center, rgba(37,99,235,0.15) 0%, rgba(10,10,15,0) 70%)', textAlign: 'center', borderBottom: '1px solid #1e293b' }}>
+        <h1 style={{ fontSize: '3rem', fontWeight: 800, margin: '0 0 16px', background: 'linear-gradient(90deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          Visual Prototyping Canvas
+        </h1>
+        <p style={{ color: '#94a3b8', fontSize: '1.2rem', maxWidth: '600px', margin: '0 auto 32px', lineHeight: 1.6 }}>
+          You assembled this interface on the visual canvas. Edit the generated React code below or preview it live!
+        </p>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+          <button style={{ background: '#2563EB', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '8px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}>
+            Explore Components
+          </button>
+        </div>
+      </section>
+
+      {/* Cards Grid Component */}
+      <section style={{ flex: 1, padding: '60px 32px', maxWidth: '1100px', margin: '0 auto', width: '100%' }}>
+        <h2 style={{ fontSize: '1.5rem', marginBottom: 24, color: '#f3f4f6' }}>Canvas Component Cards</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 24 }}>
+          {cards.map(c => (
+            <div key={c.id} style={{ background: '#13131a', border: '1px solid #27272a', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: c.color, marginBottom: 16 }}></div>
+              <h3 style={{ margin: '0 0 8px', fontSize: '1.2rem', color: '#fff' }}>{c.title}</h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.5, flex: 1, margin: '0 0 16px' }}>{c.desc}</p>
+              <button style={{ background: 'transparent', color: c.color, border: '1px solid ' + c.color, padding: '8px 16px', borderRadius: '6px', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-start' }}>
+                View Details →
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Footer Component */}
+      <footer style={{ background: '#13131a', borderTop: '1px solid #27272a', padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
+        <p style={{ margin: 0 }}>© 2026 Spark Studio Canvas Engine. Built visually with React & Supabase.</p>
+      </footer>
+    </div>
+  );
+}`,
+      'README.md': `# Visual Prototyping Canvas App\n\nThis app was created from the visual Canvas editor with Navbar, Hero Section, Cards, and Footer.`
+    };
+  } else {
+    return {
+      'App.jsx': `import React from 'react';
+
+export default function PortfolioApp() {
+  const projects = [
+    { title: 'AI Code Assistant', tech: 'React • Python • Gemini', desc: 'An intelligent coding copilot built for modern web IDEs.' },
+    { title: 'DeFi Liquidity Protocol', tech: 'Solidity • Web3.js', desc: 'Automated market maker protocol with real-time analytics.' },
+    { title: 'Cloud Infrastructure Engine', tech: 'Go • Docker • K8s', desc: 'High-speed cluster orchestration tool.' }
+  ];
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#050508', color: '#fff', fontFamily: 'sans-serif', padding: '60px 20px' }}>
+      <div style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 60 }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #ec4899)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>👨‍💻</div>
+          <h1 style={{ fontSize: '3rem', margin: '0 0 12px', background: 'linear-gradient(90deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Alex Rivers</h1>
+          <p style={{ color: '#94a3b8', fontSize: '1.2rem', margin: '0 0 24px' }}>Senior Full Stack Engineer & AI Systems Architect</p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
+            <button style={{ background: '#6366f1', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Get in Touch</button>
+            <button style={{ background: '#1e293b', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>View GitHub</button>
+          </div>
+        </div>
+
+        <h2 style={{ fontSize: '1.5rem', marginBottom: 24, borderBottom: '1px solid #1e293b', paddingBottom: 12 }}>Featured Projects</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }}>
+          {projects.map(p => (
+            <div key={p.title} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 16, padding: 24 }}>
+              <span style={{ fontSize: '0.75rem', color: '#818cf8', fontWeight: 600 }}>{p.tech}</span>
+              <h3 style={{ margin: '8px 0', fontSize: '1.2rem' }}>{p.title}</h3>
+              <p style={{ color: '#94a3b8', fontSize: '0.9rem', lineHeight: 1.5, margin: 0 }}>{p.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}`,
+      'README.md': `# Portfolio Template\n\nA modern developer portfolio pre-built with project cards and hero banner.`
+    };
+  }
+};
+
 // ── Main App ───────────────────────────────────────────────────────────────────
 function App() {
+  const [currentView, setCurrentView] = useState(() => localStorage.getItem('spark_current_view') || 'dashboard');
   const [generatedFiles, setGeneratedFiles] = useState(null);
   const [manualFile, setManualFile] = useState(null);
   const [wcBooted, setWcBooted] = useState(false);
   const [activeTab, setActiveTab] = useState('ai builder');
-  const [activeActivity, setActiveActivity] = useState('explorer');
+  const [activeActivity, setActiveActivity] = useState(() => localStorage.getItem('spark_active_activity') || 'explorer');
   const [activeSourceFile, setActiveSourceFile] = useState(null);
-  const [theme, setTheme] = useState('light');
+  const [theme, setTheme] = useState(() => localStorage.getItem('spark_theme') || 'antigravity');
   const [wcCrashLog, setWcCrashLog] = useState(null);
   const [terminalLogs, setTerminalLogs] = useState([]);
-  const [workspaceType, setWorkspaceType] = useState('team'); // 'personal' | 'team'
+  const [workspaceType, setWorkspaceType] = useState(() => localStorage.getItem('spark_workspace_type') || 'team'); // 'personal' | 'team'
+  
+  useEffect(() => {
+    localStorage.setItem('spark_current_view', currentView);
+  }, [currentView]);
+
+  useEffect(() => {
+    localStorage.setItem('spark_active_activity', activeActivity);
+  }, [activeActivity]);
+
+  useEffect(() => {
+    localStorage.setItem('spark_workspace_type', workspaceType);
+  }, [workspaceType]);
   const [personalFiles, setPersonalFiles] = useState({});
   const [teamFiles, setTeamFiles] = useState(null);
-  const [appProjectName, setAppProjectName] = useState('spark-app');
+  const [personalProjectName, setPersonalProjectName] = useState('New Project');
+  const [teamProjectName, setTeamProjectName] = useState('spark-app');
+  
+  // Use the appropriate project name based on active workspace
+  const appProjectName = workspaceType === 'personal' ? personalProjectName : teamProjectName;
+  const setAppProjectName = workspaceType === 'personal' ? setPersonalProjectName : setTeamProjectName;
   
   // ── Database state ─────────────────────────────────────────────────────────
   const [dbStatus, setDbStatus] = useState('idle');
   const [dbConfig, setDbConfig] = useState(null);
 
+  // Track recent workspaces
   useEffect(() => {
     const wsId = getOrCreateWorkspaceId();
-    fetchWorkspaceDatabase(wsId).then(cfg => {
+    if (wsId) {
+      try {
+        const saved = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
+        const filtered = saved.filter(w => w.id !== wsId);
+        filtered.unshift({
+          id: wsId,
+          title: `Workspace ${wsId.substring(0, 8)}`,
+          time: 'Just now',
+          tags: ['Team', 'React'],
+          iconColor: 'linear-gradient(135deg, #4D3DF7, #8A2BE2)',
+          iconEmoji: '✨'
+        });
+        localStorage.setItem('spark_recent_workspaces', JSON.stringify(filtered.slice(0, 6)));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const wsId = getOrCreateWorkspaceId();
+    fetchWorkspaceDatabase(wsId).then(async (cfg) => {
       if (cfg) {
         setDbConfig(cfg);
         setDbStatus('active');
+      } else {
+        setDbStatus('provisioning');
+        try {
+          const newCfg = await provisionUserDatabase(wsId);
+          setDbConfig(newCfg);
+          setDbStatus('active');
+        } catch (e) {
+          console.error('Auto-provision failed:', e);
+          setDbStatus('idle');
+        }
       }
     });
   }, []);
@@ -530,6 +950,19 @@ function App() {
   const [members, setMembers] = useState([]);
   const [inviteToast, setInviteToast] = useState(false);
 
+  const userRole = (() => {
+    if (!identity) return 'Owner';
+    try {
+      const roles = JSON.parse(localStorage.getItem('spark_member_roles') || '{}');
+      const myKey = identity.id || identity.email;
+      return roles[myKey] || identity.role || 'Owner';
+    } catch (e) {
+      return 'Owner';
+    }
+  })();
+
+  const isReadOnly = userRole === 'Viewer';
+
   // Join the workspace presence channel once identity is set
   useEffect(() => {
     if (!identity) return;
@@ -537,6 +970,7 @@ function App() {
 
     // Fetch historical workspace files from Express backend
     const loadTeamFiles = async () => {
+      const activeWs = localStorage.getItem('spark_workspace_type') || 'team';
       try {
         const token = localStorage.getItem('spark_token');
         if (!token) return;
@@ -546,15 +980,19 @@ function App() {
         if (res.ok) {
           const data = await res.json();
           if (data.files && Object.keys(data.files).length > 0) {
-            setGeneratedFiles(data.files);
             setTeamFiles(data.files);
+            if (activeWs === 'team') {
+              setGeneratedFiles(data.files);
+            }
             logActivity(`Fetched ${Object.keys(data.files).length} files from Workspace Database.`);
           } else {
             // Fallback to Supabase logs for older workspaces
             fetchWorkspaceFiles(workspaceId).then(supaFiles => {
               if (supaFiles && Object.keys(supaFiles).length > 0) {
-                setGeneratedFiles(supaFiles);
                 setTeamFiles(supaFiles);
+                if (activeWs === 'team') {
+                  setGeneratedFiles(supaFiles);
+                }
                 logActivity(`Migrated ${Object.keys(supaFiles).length} files from Supabase history.`);
                 // Save to MongoDB to complete migration
                 fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
@@ -576,11 +1014,19 @@ function App() {
     loadTeamFiles();
 
     // Load Personal Files from Local Storage
+    const activeWsType = localStorage.getItem('spark_workspace_type') || 'team';
     const savedPersonal = localStorage.getItem('spark_personal_files');
     if (savedPersonal) {
       try {
-        setPersonalFiles(JSON.parse(savedPersonal));
+        const parsed = JSON.parse(savedPersonal);
+        setPersonalFiles(parsed);
+        if (activeWsType === 'personal') {
+          setGeneratedFiles(parsed);
+        }
       } catch (e) {}
+    } else if (activeWsType === 'personal') {
+      setPersonalFiles({});
+      setGeneratedFiles({});
     }
 
     window.__sparkOnRemoteCodeGenerated = (files) => {
@@ -603,7 +1049,7 @@ function App() {
     setIsReviewing(true);
 
     try {
-      const { files: fixedFiles, review } = await reviewAndFixCode(files, originalPrompt || '', projectName || '');
+      const { files: fixedFiles, review } = await reviewAndFixCode(files, originalPrompt || '', projectName || '', dbConfig);
       setPendingReview({ files: fixedFiles, prompt: originalPrompt || '', projectName: projectName || '', reviewResult: review });
     } catch (e) {
       console.error('[Review] failed, applying original:', e);
@@ -623,6 +1069,14 @@ function App() {
     });
   };
 
+  const updatePersonalFiles = (files) => {
+    const updated = typeof files === 'function' ? files(personalFiles) : files;
+    setPersonalFiles(updated || {});
+    try {
+      localStorage.setItem('spark_personal_files', JSON.stringify(updated || {}));
+    } catch(e) { console.error('Failed saving personal files', e); }
+  };
+
   const handleApplyToCanvas = async (files) => {
     setGeneratedFiles(files);
     setPendingReview(null);
@@ -630,10 +1084,9 @@ function App() {
     logActivity(`${identity?.name || 'You'} applied to canvas: ${Object.keys(files).join(', ')}`);
     
     if (workspaceType === 'personal') {
-      const newPersonal = { ...personalFiles, ...files };
-      setPersonalFiles(newPersonal);
-      localStorage.setItem('spark_personal_files', JSON.stringify(newPersonal));
+      updatePersonalFiles(files);
     } else {
+      setTeamFiles(files);
       if (identity) {
         const workspaceId = getOrCreateWorkspaceId();
         broadcastCodeGenerated(workspaceId, files);
@@ -662,7 +1115,7 @@ function App() {
     setIsReviewing(true);
 
     try {
-      const fixedFiles = await autoHealCode(generatedFiles, wcCrashLog);
+      const fixedFiles = await autoHealCode(generatedFiles, wcCrashLog, dbConfig);
       setPendingReview({ files: fixedFiles, prompt: 'Auto-healing crash', projectName: 'CrashFix', reviewResult: { status: 'fixed', issues: ['Auto-healed based on WebContainer runtime error logs.'] } });
     } catch (e) {
       console.error('Auto-heal failed:', e);
@@ -673,10 +1126,51 @@ function App() {
     }
   };
 
-  useEffect(() => { document.body.setAttribute('data-theme', theme); }, [theme]);
+  useEffect(() => { 
+    document.body.setAttribute('data-theme', theme); 
+    localStorage.setItem('spark_theme', theme);
+  }, [theme]);
   useEffect(() => { bootWebContainer().then(() => setWcBooted(true)).catch(() => { }); }, []);
 
-  const handleAddManualFile = (filename) => setManualFile({ name: filename, timestamp: Date.now() });
+  const handleAddManualFile = (filename) => {
+    const safeName = filename.replace(/\.jsx?$/, '').replace(/[^a-zA-Z0-9]/g, '') || 'NewComponent';
+    const defaultCode = `import React from 'react';\n\nexport default function ${safeName}() {\n  return (\n    <div style={{ padding: '2rem' }}>\n      <h2>${safeName} Component</h2>\n    </div>\n  );\n}\n`;
+    setGeneratedFiles(prev => {
+      const updated = { ...(prev || {}), [filename]: defaultCode };
+      if (workspaceType === 'personal') updatePersonalFiles(updated);
+      else setTeamFiles(updated);
+      return updated;
+    });
+    setManualFile({ name: filename, timestamp: Date.now() });
+  };
+
+  const handleDeleteFile = (filename) => {
+    setGeneratedFiles(prev => {
+      if (!prev) return prev;
+      const newFiles = { ...prev };
+      delete newFiles[filename];
+
+      if (workspaceType === 'personal') {
+        updatePersonalFiles(newFiles);
+      } else {
+        setTeamFiles(newFiles);
+        const workspaceId = getOrCreateWorkspaceId();
+        try {
+          const token = localStorage.getItem('spark_token');
+          if (token) {
+            fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ files: newFiles })
+            });
+          }
+        } catch (e) {
+          console.error('Failed to update DB on file delete', e);
+        }
+      }
+      return newFiles;
+    });
+  };
 
   const handleSimulateCrash = () => {
     setActiveTab('terminal');
@@ -718,7 +1212,7 @@ function App() {
           <div style={{ color: '#00fa9a', fontSize: '0.8rem' }}>Spinning up Supabase Postgres instance...</div>
         )}
         {dbStatus === 'active' && dbConfig && (
-          <div style={{ background: 'var(--vscode-bg)', padding: '10px', borderRadius: '6px', border: '1px solid var(--vscode-border)' }}>
+          <div style={{ background: 'var(--panel-bg)', padding: '10px', borderRadius: '6px', border: '1px solid var(--panel-border)' }}>
             <div style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '4px' }}>● Supabase Database Active</div>
             <div style={{ fontSize: '0.7rem', opacity: 0.7, wordBreak: 'break-all', marginBottom: '4px' }}>
               URL: <code>{dbConfig.url}</code>
@@ -751,16 +1245,35 @@ function App() {
         />
       );
     }
-    if (activeActivity === 'preview') return (
-      <div className="sidebar-section">
-        <h3>LIVE PREVIEW</h3>
-        <p style={{ opacity: 0.8, fontSize: '0.85rem' }}>
-          👁️ Preview mode active.<br/><br/>
-          The live app is now rendering in the main window.<br/><br/>
-          Switch back to the Explorer (📄) to see your code.
-        </p>
-      </div>
-    );
+    if (activeActivity === 'preview') {
+      const fileKeys = generatedFiles ? Object.keys(generatedFiles) : [];
+      return (
+        <div className="sidebar-section">
+          <h3>LIVE PREVIEW</h3>
+          <p style={{ opacity: 0.8, fontSize: '0.85rem' }}>
+            👁️ Preview mode active.<br/><br/>
+            The live app is now rendering in the main window.<br/><br/>
+            Switch back to the Explorer (📄) to see your code.
+          </p>
+          
+          {fileKeys.length > 0 && (
+            <div style={{ marginTop: '20px' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '8px', display: 'block' }}>COMPONENT TO PREVIEW</label>
+              <select
+                className="ide-input"
+                value={activeSourceFile || ''}
+                onChange={e => setActiveSourceFile(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px' }}
+              >
+                {fileKeys.map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+      );
+    }
     if (activeActivity === 'source') {
       const files = generatedFiles || {};
       const fileKeys = Object.keys(files);
@@ -782,8 +1295,8 @@ function App() {
                   cursor: 'pointer',
                   borderRadius: '4px',
                   background: activeSourceFile === file ? 'rgba(99, 102, 241, 0.2)' : 'transparent',
-                  color: activeSourceFile === file ? 'var(--vscode-accent)' : 'var(--vscode-text)',
-                  borderLeft: activeSourceFile === file ? '3px solid var(--vscode-accent)' : '3px solid transparent'
+                  color: activeSourceFile === file ? 'var(--accent)' : 'var(--text-main)',
+                  borderLeft: activeSourceFile === file ? '3px solid var(--accent)' : '3px solid transparent'
                 }}
               >
                 📄 {file}
@@ -811,9 +1324,13 @@ function App() {
             <h3>ONLINE NOW ({members.length})</h3>
             {members.map((m, i) => (
               <div key={m.id || i} style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#000', fontWeight: 'bold', flexShrink: 0 }}>
-                  {m.initials}
-                </div>
+                {m.avatarUrl ? (
+                  <img src={m.avatarUrl} alt={m.name} style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: m.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#fff', fontWeight: 'bold', flexShrink: 0 }}>
+                    {m.initials}
+                  </div>
+                )}
                 <span style={{ fontSize: '0.8rem', opacity: 0.85 }}>{m.name}</span>
                 <span style={{ marginLeft: 'auto', width: '7px', height: '7px', borderRadius: '50%', background: '#56d364', flexShrink: 0 }} />
               </div>
@@ -837,6 +1354,45 @@ function App() {
     return <AuthModal onLogin={setIdentity} />;
   }
 
+  if (currentView === 'dashboard') {
+    return <Dashboard 
+      identity={identity} 
+      members={members}
+      onOpenWorkspace={(type, options = {}) => {
+        if (type === 'new') {
+          if (options.initialPrompt) {
+            const promptTitle = options.initialPrompt.length > 25 ? options.initialPrompt.substring(0, 25) + '...' : options.initialPrompt;
+            setPersonalProjectName(promptTitle);
+            setWorkspaceType('personal');
+            setActiveActivity('preview');
+            // Trigger AI generation immediately
+            generateAppFromVoice(options.initialPrompt, promptTitle, dbConfig).then(code => {
+              setGeneratedFiles(code);
+              setPersonalFiles(code);
+              broadcastFiles(code);
+            }).catch(err => console.error('AI Generation error:', err));
+          } else if (options.template) {
+            setPersonalProjectName(options.template);
+            setWorkspaceType('personal');
+            const templateFiles = getTemplateCode(options.template);
+            setGeneratedFiles(templateFiles);
+            setPersonalFiles(templateFiles);
+          } else {
+            setGeneratedFiles({});
+            setPersonalFiles({});
+            setPersonalProjectName('New Project');
+            setWorkspaceType('personal');
+          }
+          if (options.tab) setActiveTab(options.tab);
+          if (options.activity) setActiveActivity(options.activity);
+        }
+        setCurrentView('ide');
+      }} 
+      theme={theme}
+      setTheme={setTheme}
+    />;
+  }
+
   return (
     <AutomationProvider>
       <div className="ide-layout">
@@ -858,7 +1414,8 @@ function App() {
         <ErrorBoundaryWrapper>
           {/* Sidebar */}
           <div className="ide-sidebar">
-            <div className="ide-sidebar-header">
+            <div className="ide-sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button onClick={() => setCurrentView('dashboard')} className="ide-btn-icon" style={{ padding: '2px 4px', fontSize: '0.8rem', height: 'auto', width: 'auto' }} title="Back to Dashboard">←</button>
               {activeActivity === 'explorer' ? 'Explorer — Spark Studio' : activeActivity.toUpperCase()}
             </div>
             {renderSidebar()}
@@ -878,11 +1435,11 @@ function App() {
                       setTeamFiles(generatedFiles || {});
                       setGeneratedFiles(personalFiles || {});
                     } else {
-                      setPersonalFiles(generatedFiles || {});
+                      updatePersonalFiles(generatedFiles || {});
                       setGeneratedFiles(teamFiles || {});
                     }
                   }}
-                  style={{ marginLeft: '10px', height: '24px', padding: '0 8px', width: 'auto', background: 'transparent', border: '1px solid var(--vscode-border)', borderRadius: '4px' }}
+                  style={{ marginLeft: '10px', height: '24px', padding: '0 8px', width: 'auto', background: 'transparent', border: '1px solid var(--panel-border)', borderRadius: '4px' }}
                 >
                   <option value="personal">Personal Workspace</option>
                   <option value="team">Team Workspace</option>
@@ -890,15 +1447,48 @@ function App() {
                 {workspaceType === 'team' && generatedFiles && Object.keys(generatedFiles).length > 0 && (
                   <button 
                     className="ide-btn" 
-                    style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.75rem', height: '24px', background: 'transparent', border: '1px solid var(--vscode-border)', color: 'var(--vscode-text)' }}
+                    style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.75rem', height: '24px', background: 'transparent', border: '1px solid var(--panel-border)', color: 'var(--text-main)' }}
                     title="Copy Team files to Personal Workspace"
                     onClick={() => {
-                      setPersonalFiles({...generatedFiles});
+                      const newPers = { ...(personalFiles || {}), ...generatedFiles };
+                      updatePersonalFiles(newPers);
+                      setPersonalProjectName(teamProjectName);
                       setTeamFiles(generatedFiles);
                       setWorkspaceType('personal');
                     }}
                   >
                     Copy to Personal
+                  </button>
+                )}
+                {workspaceType === 'personal' && generatedFiles && Object.keys(generatedFiles).length > 0 && (
+                  <button 
+                    className="ide-btn" 
+                    style={{ marginLeft: '8px', padding: '2px 8px', fontSize: '0.75rem', height: '24px', background: 'transparent', border: '1px solid var(--panel-border)', color: 'var(--text-main)' }}
+                    title="Copy Personal files to Team Workspace"
+                    onClick={() => {
+                      const mergedFiles = { ...(teamFiles || {}), ...generatedFiles };
+                      setTeamFiles(mergedFiles);
+                      setTeamProjectName(personalProjectName);
+                      updatePersonalFiles(generatedFiles);
+                      setWorkspaceType('team');
+                      // Broadcast these files to the team
+                      if (identity) {
+                        const wsId = getOrCreateWorkspaceId();
+                        broadcastCodeGenerated(wsId, mergedFiles);
+                        try {
+                          const token = localStorage.getItem('spark_token');
+                          if (token) {
+                            fetch(`http://localhost:3001/api/workspace/${wsId}`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                              body: JSON.stringify({ files: mergedFiles })
+                            });
+                          }
+                        } catch (e) {}
+                      }
+                    }}
+                  >
+                    Copy to Team
                   </button>
                 )}
               </div>
@@ -909,16 +1499,20 @@ function App() {
                     title={`${identity.name} (You)`}
                     style={{
                       width: 30, height: 30, borderRadius: '50%',
-                      background: identity.color || 'var(--vscode-accent)', color: '#fff',
+                      background: identity.color || 'var(--accent)', color: '#fff',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.72rem', fontWeight: 700,
-                      border: '2px solid var(--vscode-bg)',
+                      border: '2px solid var(--app-bg)',
                       boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
                       zIndex: 10, flexShrink: 0, cursor: 'default', position: 'relative'
                     }}
                   >
-                    {identity.initials || identity.name?.substring(0, 2).toUpperCase() || 'U'}
-                    <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--vscode-bg)' }} />
+                    {identity.avatarUrl ? (
+                      <img src={identity.avatarUrl} alt={identity.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <>{identity.initials || identity.name?.substring(0, 2).toUpperCase() || 'U'}</>
+                    )}
+                    <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--app-bg)' }} />
                   </div>
                   {members.filter(m => m.id !== identity.id).map((m, i) => (
                     <div
@@ -929,18 +1523,26 @@ function App() {
                         background: m.color, color: '#fff',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '0.72rem', fontWeight: 700,
-                        border: '2px solid var(--vscode-bg)',
+                        border: '2px solid var(--app-bg)',
                         boxShadow: '0 0 0 1px rgba(0,0,0,0.1)',
                         marginLeft: -8, zIndex: 9 - i, flexShrink: 0, cursor: 'default', position: 'relative'
                       }}
                     >
-                      {m.initials}
-                      <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--vscode-bg)' }} />
+                      {m.avatarUrl ? (
+                        <img src={m.avatarUrl} alt={m.name} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <>{m.initials}</>
+                      )}
+                      <span style={{ position: 'absolute', bottom: -1, right: -1, width: 8, height: 8, borderRadius: '50%', background: '#22c55e', border: '1.5px solid var(--app-bg)' }} />
                     </div>
                   ))}
                 </div>
-                <div style={{ width: 1, height: 18, background: 'var(--vscode-border)', margin: '0 4px' }} />
-                <ShareButton generatedFiles={generatedFiles} projectName={appProjectName} workspaceId={getOrCreateWorkspaceId()} />
+                <div style={{ width: 1, height: 18, background: 'var(--panel-border)', margin: '0 4px' }} />
+                <ShareButton 
+                  generatedFiles={activeSourceFile && generatedFiles && generatedFiles[activeSourceFile] ? { [activeSourceFile]: generatedFiles[activeSourceFile] } : generatedFiles} 
+                  projectName={appProjectName} 
+                  workspaceId={getOrCreateWorkspaceId()} 
+                />
                 <button className="ide-btn premium-btn invite-btn" onClick={handleInvite}>
                   {inviteToast ? 'Copied' : 'Invite'}
                 </button>
@@ -956,15 +1558,16 @@ function App() {
                     onFilesChange={setGeneratedFiles} 
                     theme={theme} 
                     activeFile={activeSourceFile}
+                    readOnly={isReadOnly}
                   />
                 </div>
               ) : activeActivity === 'preview' ? (
                 <div style={{ flex: 1, height: '100%', background: '#fff' }}>
-                  <FastPreviewIframe generatedFiles={generatedFiles} />
+                  <FastPreviewIframe generatedFiles={generatedFiles} activePreviewFile={activeSourceFile} />
                 </div>
               ) : (
                 <div style={{ flex: 1 }}>
-                  <CanvasEditor newGeneratedFiles={generatedFiles} manualFile={manualFile} theme={theme} />
+                  <CanvasEditor newGeneratedFiles={generatedFiles} manualFile={manualFile} theme={theme} onFileDelete={handleDeleteFile} readOnly={isReadOnly} />
                 </div>
               )}
             </div>
@@ -974,7 +1577,7 @@ function App() {
               <div className="panel-header">
                 {(isNonTech ? ['ai builder'] : ['ai builder', 'terminal', 'output']).map(t => (
                   <span key={t}
-                    style={{ cursor: 'pointer', textTransform: 'uppercase', color: activeTab === t ? 'var(--vscode-text)' : '#555', borderBottom: activeTab === t ? '1px solid var(--vscode-accent)' : 'none', paddingBottom: '2px' }}
+                    style={{ cursor: 'pointer', textTransform: 'uppercase', color: activeTab === t ? 'var(--text-main)' : '#555', borderBottom: activeTab === t ? '2px solid var(--accent)' : 'none', paddingBottom: '2px' }}
                     onClick={() => setActiveTab(t)}>
                     {t}
                   </span>

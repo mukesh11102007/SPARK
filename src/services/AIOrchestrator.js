@@ -14,52 +14,71 @@ const getAiClient = () => {
 
 const executeWithRoundRobin = async (operation) => {
   let attempts = 0;
+  const errors = [];
   while (attempts < keys.length) {
     try {
       return await operation(getAiClient());
     } catch (e) {
       console.warn(`[AIOrchestrator] Key ${currentKeyIndex} failed. Trying next...`, e);
+      errors.push(`Key ${currentKeyIndex}: ${e.message}`);
       currentKeyIndex = (currentKeyIndex + 1) % keys.length;
       attempts++;
     }
   }
-  throw new Error("All Gemini API keys failed or rate limited.");
+  throw new Error("All Gemini API keys failed or rate limited. Details: " + errors.join(' | '));
+};
+
+// Helper to recursively find JS/JSX code in nested JSON objects
+const findCodeInObject = (obj) => {
+  if (!obj) return null;
+  if (typeof obj === 'string') {
+    const trimmed = obj.trim();
+    if (trimmed.includes('export default') || trimmed.includes('return (') || (trimmed.includes('import React') && trimmed.includes('function'))) {
+      return trimmed;
+    }
+    return null;
+  }
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      const found = findCodeInObject(item);
+      if (found) return found;
+    }
+  } else if (typeof obj === 'object') {
+    const priorityKeys = ['code', 'response', 'text', 'content', 'output', 'items', 'json', 'body', 'data', 'result'];
+    for (const key of priorityKeys) {
+      if (obj[key]) {
+        const found = findCodeInObject(obj[key]);
+        if (found) return found;
+      }
+    }
+    for (const val of Object.values(obj)) {
+      const found = findCodeInObject(val);
+      if (found) return found;
+    }
+  }
+  return null;
 };
 
 // ── Extract React code from any response format ─────────────────────────────
 const extractCode = (raw, projectName) => {
   let text = raw.trim();
 
-  try {
-    const parsed = JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim());
-
-    // n8n Text-mode: _responseData holds the code
-    if (parsed._responseData && typeof parsed._responseData === 'string' && parsed._responseData.trim()) {
-      text = parsed._responseData.trim();
-    }
-    // n8n items array (what the webhook is actually returning!)
-    else if (Array.isArray(parsed.items) && parsed.items[0]) {
-      const j = parsed.items[0].json;
-      // ✅ Gemini API format inside n8n: content.parts[0].text
-      const candidate =
-        j?.content?.parts?.[0]?.text ||   // <-- Gemini format (this is what your n8n returns!)
-        j?.text || j?.content || j?.output || j?.message || j?.code || j?.result;
-      if (typeof candidate === 'string' && candidate.trim()) text = candidate.trim();
-    }
-    // Direct file map {"Component.jsx": "..."}
-    else if (typeof parsed === 'object' && !Array.isArray(parsed)) {
-      const vals = Object.values(parsed);
-      if (vals.some(v => typeof v === 'string' && (v.includes('import') || v.includes('export') || v.includes('function')))) {
-        return parsed;
+  if (text.startsWith('{') || text.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim());
+      const extracted = findCodeInObject(parsed);
+      if (extracted) {
+        text = extracted;
+      } else {
+        // Return null so caller falls back to Gemini API
+        return null;
       }
-      const cf = parsed.code || parsed.result || parsed.output || parsed.data || parsed.response || parsed.content || parsed.message;
-      if (typeof cf === 'string' && cf.trim()) text = cf.trim();
-    }
-  } catch {}
+    } catch {}
+  }
 
   // Treat as raw code
   const clean = text.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
-  if (clean.length > 30 && (clean.includes('import') || clean.includes('export') || clean.includes('function') || clean.includes('const '))) {
+  if (!clean.startsWith('{') && !clean.startsWith('[') && clean.length > 50 && (clean.includes('export default') || (clean.includes('function') && clean.includes('return')))) {
     const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
     let fileName;
     if (match && match[1]) {
@@ -79,14 +98,20 @@ const extractCode = (raw, projectName) => {
 const getDbPrompt = (dbConfig) => {
   if (!dbConfig || dbConfig.status !== 'active') return '';
   return `
-[SUPABASE DATABASE INTEGRATION REQUIRED]
+[SUPABASE REAL-TIME DATABASE INTEGRATION REQUIRED]
 The user has provisioned a real Supabase database. You MUST write this component to interact with it!
 - Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
 - Initialize the client OUTSIDE the component: 
   \`const supabase = window.supabase.createClient('${dbConfig.url}', '${dbConfig.anonKey}');\`
-- Use the table name: '${dbConfig.table}'
-- Write fully functional CRUD logic (fetch in useEffect, insert, update, delete).
-- Assume the table has standard columns (id, created_at) and any other columns your app needs (Supabase will auto-create them or just assume they exist for this demo).
+- Use the table name: '${dbConfig.table}' (this is a NoSQL-like logs table).
+- The table schema is: \`id\` (UUID, generated automatically), \`created_at\` (timestamp), \`workspace_id\` (text), \`payload\` (JSONB).
+- ALWAYS insert data with the workspace ID: 
+  \`{ workspace_id: '${dbConfig.workspaceId}', payload: { type: 'YourModelName', ...yourData } }\`
+- ALWAYS fetch data filtered by the workspace ID:
+  \`supabase.from('${dbConfig.table}').select('*').eq('workspace_id', '${dbConfig.workspaceId}')\`
+- Extract your actual data from the \`payload\` column when reading (e.g. \`item.payload.title\`).
+- IMPORTANT: Set up real-time subscriptions in a useEffect to listen for inserts/updates/deletes on this table:
+  \`supabase.channel('custom-all-channel').on('postgres_changes', { event: '*', schema: 'public', table: '${dbConfig.table}', filter: 'workspace_id=eq.${dbConfig.workspaceId}' }, (payload) => { /* handle realtime update */ }).subscribe();\`
 - The UI MUST reflect real data fetched from this Supabase table.
 `;
 };
@@ -136,10 +161,11 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
   const timeout = setTimeout(() => controller.abort(), 120_000);
 
   try {
+    const fullPrompt = prompt + '\n' + getDbPrompt(dbConfig);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt, projectName, dbConfig }),
+      body: JSON.stringify({ prompt: fullPrompt, projectName, dbConfig }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
@@ -170,8 +196,19 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
 };
 
 // ── Refine existing code via Gemini ──────────────────────────────────────────
-export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null) => {
-  console.log('[AIOrchestrator] Refining code with Gemini...');
+export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null, workspaceFiles = null) => {
+  console.log('[AIOrchestrator] Refining code with Gemini...', { filename });
+  
+  let workspaceContext = '';
+  if (workspaceFiles && Object.keys(workspaceFiles).length > 1) {
+    workspaceContext = `\n\nOther files in this workspace for context (DO NOT MODIFY THESE, they are just so you know what exists):\n`;
+    Object.entries(workspaceFiles).forEach(([f, c]) => {
+      if (f !== filename) {
+        workspaceContext += `\n--- ${f} ---\n\`\`\`jsx\n${c}\n\`\`\`\n`;
+      }
+    });
+  }
+
   const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
     model: 'gemini-2.5-flash',
     contents: `You are an expert React developer.
@@ -190,10 +227,11 @@ CRITICAL RULES — MUST FOLLOW:
 Project name: ${projectName}
 Refinement Request: ${problemStatement}
 
-Current Code:
+Current Code for ${filename}:
 \`\`\`jsx
 ${existingCode}
 \`\`\`
+${workspaceContext}
 
 ${getDbPrompt(dbConfig)}
 
@@ -212,7 +250,7 @@ Remember: ONLY return the raw code.`
 };
 
 // ── Review & auto-fix generated code before applying to canvas ────────────────
-export const reviewAndFixCode = async (files, originalPrompt, projectName) => {
+export const reviewAndFixCode = async (files, originalPrompt, projectName, dbConfig) => {
   const firstFile = Object.entries(files)[0];
   if (!firstFile) return { files, review: null };
 
@@ -230,6 +268,8 @@ Generated code:
 ${code}
 \`\`\`
 
+${getDbPrompt(dbConfig)}
+
 Your job:
 1. Check if the code matches the user's request.
 2. Check for any syntax errors, missing imports, undefined variables.
@@ -237,8 +277,9 @@ Your job:
 4. CRITICAL: The ONLY allowed import is: import React, { useState, useEffect, useRef } from 'react';
 5. Ensure ALL styles are inline (style={{}}). Remove any CSS class references to external stylesheets.
 6. Verify that the default export exists as: export default function ComponentName() { ... }
-7. Fix ALL problems and return corrected code.
-8. Return a JSON object in this EXACT format:
+7. CRITICAL: If the code uses a simulated backend, localStorage, or alert() popups to simulate saving data, you MUST completely rewrite those parts to use the Supabase real-time database exactly as instructed above!
+8. Fix ALL problems and return corrected code.
+9. Return a JSON object in this EXACT format:
 {
   "status": "ok" | "fixed",
   "issues": ["list of issues found, or empty array"],
@@ -251,7 +292,7 @@ Your job:
     const result = JSON.parse(text);
     const fixedCode = (result.code || code).replace(/```jsx?/gi, '').replace(/```/g, '').trim();
     return {
-      files: { [filename]: fixedCode },
+      files: { ...files, [filename]: fixedCode },
       review: {
         status: result.status || 'ok',
         issues: result.issues || [],
@@ -264,7 +305,7 @@ Your job:
 };
 
 // ── Auto-Heal: Fix code based on error logs ───────────────────────────────────
-export const autoHealCode = async (files, errorLog) => {
+export const autoHealCode = async (files, errorLog, dbConfig) => {
   const firstFile = Object.entries(files)[0];
   if (!firstFile) return files;
   const [filename, code] = firstFile;
@@ -277,7 +318,9 @@ export const autoHealCode = async (files, errorLog) => {
 Error Log:
 ${errorLog}
 
-Component Code:
+${getDbPrompt(dbConfig)}
+
+Your job: Component Code:
 \`\`\`jsx
 ${code}
 \`\`\`
@@ -285,7 +328,11 @@ ${code}
 Fix the code to resolve the error. Return ONLY the complete corrected raw JSX/React code. Do not include markdown, no \`\`\`, no explanation.`
   }));
 
-  const raw = resp.text || '';
-  const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
-  return { [filename]: clean };
+  try {
+    const raw = resp.text || '';
+    const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+    return { ...files, [filename]: clean };
+  } catch {
+    return files;
+  }
 };

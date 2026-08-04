@@ -17,9 +17,30 @@ export const getOrCreateWorkspaceId = () => {
   return wsId;
 };
 
-export const getWorkspaceInviteUrl = () => {
+export const getWorkspaceInviteUrl = (ownerEmail) => {
   const wsId = getOrCreateWorkspaceId();
-  return `${window.location.origin}${window.location.pathname}?workspace=${wsId}`;
+  const owner = ownerEmail || localStorage.getItem('spark_workspace_owner') || 'gm233097@gmail.com';
+  return `${window.location.origin}${window.location.pathname}?workspace=${wsId}&owner=${encodeURIComponent(owner)}`;
+};
+
+export const broadcastRoleUpdate = (memberKey, newRole) => {
+  if (presenceChannel) {
+    presenceChannel.send({
+      type: 'broadcast',
+      event: 'role_updated',
+      payload: { memberKey, newRole }
+    });
+  }
+};
+
+export const broadcastWorkspaceNameUpdate = (newName) => {
+  if (presenceChannel) {
+    presenceChannel.send({
+      type: 'broadcast',
+      event: 'workspace_name_updated',
+      payload: { newName }
+    });
+  }
 };
 
 // ── User identity (stored in localStorage) ────────────────────────────────────
@@ -56,6 +77,7 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
       name: p.name,
       initials: p.initials,
       color: p.color,
+      avatarUrl: p.avatarUrl,
     }));
   };
 
@@ -87,6 +109,16 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
         window.__sparkOnRemoteCanvasUpdate(payload);
       }
     })
+    .on('broadcast', { event: 'role_updated' }, ({ payload }) => {
+      if (payload && window.__sparkOnRemoteRoleUpdate) {
+        window.__sparkOnRemoteRoleUpdate(payload);
+      }
+    })
+    .on('broadcast', { event: 'workspace_name_updated' }, ({ payload }) => {
+      if (payload && window.__sparkOnRemoteWorkspaceNameUpdate) {
+        window.__sparkOnRemoteWorkspaceNameUpdate(payload);
+      }
+    })
     .subscribe(async (status) => {
       console.log('[Supabase Presence] Status:', status);
       if (status === 'SUBSCRIBED') {
@@ -95,6 +127,7 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
           name: identity.name,
           initials: identity.initials,
           color: identity.color,
+          avatarUrl: identity.avatarUrl,
           online_at: Date.now(),
         });
       }

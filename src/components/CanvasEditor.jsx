@@ -36,30 +36,31 @@ const CustomNode = ({ data, id, selected }) => {
 
   return (
     <div style={{
-      background: '#ffffff',
-      border: selected ? '2px solid #10b981' : '1.5px solid #10b981',
-      borderRadius: '12px',
+      position: 'relative',
       minWidth: '210px',
       maxWidth: '260px',
-      boxShadow: selected
-        ? '0 0 0 4px rgba(16,185,129,0.15), 0 8px 24px rgba(0,0,0,0.1)'
-        : '0 4px 12px rgba(0,0,0,0.08)',
-      transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
-      overflow: 'hidden',
-      cursor: 'grab',
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
-      position: 'relative',
     }}>
-
-      {/* ✓ checked badge top-right like n8n */}
       <div style={{
-        position: 'absolute', top: -1, right: 10,
-        background: '#10b981', borderRadius: '0 0 6px 6px',
-        width: 22, height: 18,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 11, color: '#fff', fontWeight: 700,
-        zIndex: 2,
-      }}>✓</div>
+        background: '#ffffff',
+        border: selected ? '2px solid #10b981' : '1.5px solid #10b981',
+        borderRadius: '12px',
+        boxShadow: selected
+          ? '0 0 0 4px rgba(16,185,129,0.15), 0 8px 24px rgba(0,0,0,0.1)'
+          : '0 4px 12px rgba(0,0,0,0.08)',
+        transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
+        overflow: 'hidden',
+        cursor: 'grab',
+      }}>
+        {/* ✓ checked badge top-right like n8n */}
+        <div style={{
+          position: 'absolute', top: -1, right: 10,
+          background: '#10b981', borderRadius: '0 0 6px 6px',
+          width: 22, height: 18,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 11, color: '#fff', fontWeight: 700,
+          zIndex: 2,
+        }}>✓</div>
 
       {/* Header */}
       <div style={{
@@ -140,27 +141,31 @@ const CustomNode = ({ data, id, selected }) => {
           textTransform: 'uppercase', letterSpacing: '0.04em',
         }}>.{ext}</span>
         <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>React Component</span>
-        {/* + port on the right side like n8n */}
-        <span style={{
-          marginLeft: 'auto', background: '#e5e7eb', color: '#374151',
-          borderRadius: '50%', width: 16, height: 16,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 12, fontWeight: 700, cursor: 'pointer', flexShrink: 0,
-        }}>+</span>
+      </div>
       </div>
 
-      {/* Handles */}
+      {/* Target Handle (Left side) */}
       <Handle type="target" position={Position.Left}
         style={{
-          background: '#d1d5db', width: 10, height: 10, left: -5,
-          border: '2px solid #fff', boxShadow: '0 0 0 1.5px #9ca3af',
+          background: '#10b981', width: 14, height: 14, left: -7,
+          border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          top: '50%', cursor: 'crosshair', transition: 'transform 0.15s',
+          zIndex: 10
         }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
       />
+      
+      {/* Source Handle (Right side) */}
       <Handle type="source" position={Position.Right}
         style={{
-          background: '#d1d5db', width: 10, height: 10, right: -5,
-          border: '2px solid #fff', boxShadow: '0 0 0 1.5px #9ca3af',
+          background: '#6366f1', width: 14, height: 14, right: -7,
+          border: '2px solid #fff', boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+          top: '50%', cursor: 'crosshair', transition: 'transform 0.15s',
+          zIndex: 10
         }}
+        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.2)'}
+        onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
       />
     </div>
   );
@@ -168,20 +173,28 @@ const CustomNode = ({ data, id, selected }) => {
 
 const nodeTypes = { customNode: CustomNode };
 
-export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' }) => {
+export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', onFileDelete, isActive = true, readOnly = false }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   const handleDeleteNode = useCallback((nodeId) => {
-    setNodes(nds => nds.filter(n => n.id !== nodeId));
+    if (readOnly) return;
+    setNodes(nds => {
+      const nodeToDelete = nds.find(n => n.id === nodeId);
+      if (nodeToDelete && onFileDelete) {
+        onFileDelete(nodeToDelete.data.label);
+      }
+      return nds.filter(n => n.id !== nodeId);
+    });
     setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
-  }, [setNodes, setEdges]);
+  }, [setNodes, setEdges, onFileDelete, readOnly]);
 
   const handleRenameNode = useCallback((nodeId, newLabel) => {
+    if (readOnly) return;
     setNodes(nds => nds.map(n =>
       n.id === nodeId ? { ...n, data: { ...n.data, label: newLabel } } : n
     ));
-  }, [setNodes]);
+  }, [setNodes, readOnly]);
 
   const makeNodeData = useCallback((base) => ({
     ...base,
@@ -216,39 +229,65 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
     }]);
   }, [manualFile]);
 
-  // AI-generated files → nodes, laid out in a grid like n8n
+  // AI-generated files → nodes
   useEffect(() => {
     if (!newGeneratedFiles) return;
     const entries = Object.entries(newGeneratedFiles);
-    const cols = Math.min(entries.length, 2);
-    const newNodes = entries.map(([filename, code], index) => ({
-      id: `gen-${filename}`,
-      position: {
-        x: 80 + (index % cols) * 300,
-        y: 80 + Math.floor(index / cols) * 180,
-      },
-      type: 'customNode',
-      data: makeNodeData({ label: filename, code }),
-    }));
-
+    
     setNodes(nds => {
-      const keep = nds.filter(n => !n.id.startsWith('gen-'));
-      return [...keep, ...newNodes];
-    });
+      const existingNodes = new Map(nds.map(n => [n.id, n]));
+      const updatedNodes = [];
+      const cols = Math.min(Math.max(entries.length, 1), 2);
 
-    // Chain edges between consecutive nodes
-    if (newNodes.length > 1) {
-      const chainEdges = newNodes.slice(0, -1).map((n, i) => ({
-        id: `chain-${i}`,
-        source: n.id,
-        target: newNodes[i + 1].id,
-        type: 'smoothstep',
-        animated: false,
-        style: { stroke: '#d1d5db', strokeWidth: 2 },
-      }));
-      setEdges(chainEdges);
-    }
-  }, [newGeneratedFiles]);
+      entries.forEach(([filename, code], index) => {
+        const id = `gen-${filename}`;
+        if (existingNodes.has(id)) {
+          const existing = existingNodes.get(id);
+          updatedNodes.push({
+            ...existing,
+            data: makeNodeData({ label: filename, code })
+          });
+        } else {
+          updatedNodes.push({
+            id,
+            position: { x: 80 + (index % cols) * 300, y: 80 + Math.floor(index / cols) * 180 },
+            type: 'customNode',
+            data: makeNodeData({ label: filename, code }),
+          });
+        }
+      });
+
+      const manualNodes = nds.filter(n => !n.id.startsWith('gen-'));
+      const finalNodes = [...manualNodes, ...updatedNodes];
+
+      // Auto-chain edges ONLY if we generated a fresh batch and the canvas was empty
+      if (updatedNodes.length > 1 && nds.length === 0) {
+        const deletedIds = JSON.parse(localStorage.getItem('spark_deleted_edges') || '[]');
+        const chainEdges = updatedNodes.slice(0, -1).map((n, i) => ({
+          id: `chain-${i}`,
+          source: n.id,
+          target: updatedNodes[i + 1].id,
+          type: 'smoothstep',
+          animated: false,
+          style: { stroke: '#d1d5db', strokeWidth: 2 },
+        })).filter(e => !deletedIds.includes(e.id));
+
+        if (chainEdges.length > 0) {
+          setTimeout(() => setEdges(eds => [...eds, ...chainEdges]), 0);
+        }
+      }
+
+      return finalNodes;
+    });
+  }, [newGeneratedFiles, makeNodeData, setEdges]);
+
+  const recordDeletedEdges = (deletedEdgesList) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem('spark_deleted_edges') || '[]');
+      const updated = Array.from(new Set([...existing, ...deletedEdgesList.map(e => e.id)]));
+      localStorage.setItem('spark_deleted_edges', JSON.stringify(updated));
+    } catch(err) { console.error('Failed to save deleted edges', err); }
+  };
 
   const onConnect = useCallback((params) => {
     setEdges(eds => {
@@ -264,13 +303,17 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
 
   const onNodesDelete = useCallback((deleted) => {
     setNodes(nds => {
+      deleted.forEach(d => {
+        if (onFileDelete) onFileDelete(d.data.label);
+      });
       const remainingNodes = nds.filter(n => !deleted.find(d => d.id === n.id));
       broadcastCanvasUpdate(remainingNodes, edges);
       return remainingNodes;
     });
-  }, [nodes, edges, setNodes]);
+  }, [nodes, edges, setNodes, onFileDelete]);
 
   const onEdgesDelete = useCallback((deleted) => {
+    recordDeletedEdges(deleted);
     setEdges(eds => {
       const remainingEdges = eds.filter(e => !deleted.find(d => d.id === e.id));
       broadcastCanvasUpdate(nodes, remainingEdges);
@@ -278,7 +321,7 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
     });
   }, [nodes, edges, setEdges]);
 
-  const isDark = theme === 'antigravity';
+  const isDark = theme === 'antigravity' || theme === 'dark';
 
   return (
     <div style={{ width: '100%', height: '100%', flex: 1 }}>
@@ -289,9 +332,17 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light' })
         onEdgesChange={onEdgesChange}
         onNodesDelete={onNodesDelete}
         onEdgesDelete={onEdgesDelete}
+        onEdgeDoubleClick={(_, edge) => {
+          recordDeletedEdges([edge]);
+          setEdges((eds) => eds.filter((e) => e.id !== edge.id));
+          const remainingEdges = edges.filter((e) => e.id !== edge.id);
+          broadcastCanvasUpdate(nodes, remainingEdges);
+        }}
         onConnect={onConnect}
-        onNodeDragStop={(_, __, allNodes) => broadcastCanvasUpdate(allNodes, edges)}
+        onNodeDragStop={(_, __, allNodes) => !readOnly && broadcastCanvasUpdate(allNodes, edges)}
         nodeTypes={nodeTypes}
+        nodesDraggable={!readOnly}
+        nodesConnectable={!readOnly}
         colorMode={isDark ? 'dark' : 'light'}
         style={{
           background: isDark ? '#0d0d12' : '#ffffff',

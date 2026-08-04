@@ -5,15 +5,15 @@ export const provisionUserDatabase = async (workspaceId, projectName = 'spark_db
   const dbConfig = {
     url: import.meta.env.VITE_SUPABASE_URL || 'https://vhajjswtxlrvpnbosdgm.supabase.co',
     anonKey: import.meta.env.VITE_SUPABASE_ANON_KEY || '',
-    table: 'spark_projects',
-    connectionString: `postgresql://postgres:[YOUR-PASSWORD]@db.vhajjswtxlrvpnbosdgm.supabase.co:5432/postgres`,
+    workspaceId: workspaceId,
+    table: 'spark',
     status: 'active',
     provisionedAt: new Date().toISOString()
   };
 
   try {
-    // Register database provision log in Supabase logs table
-    await supabase.from('logs').insert([{
+    // Register database provision log in Supabase spark table
+    await supabase.from('spark').insert([{
       workspace_id: workspaceId,
       payload: {
         event: 'db_provisioned',
@@ -32,7 +32,7 @@ export const provisionUserDatabase = async (workspaceId, projectName = 'spark_db
 export const fetchWorkspaceDatabase = async (workspaceId) => {
   try {
     const { data, error } = await supabase
-      .from('logs')
+      .from('spark')
       .select('payload')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
