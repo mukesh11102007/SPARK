@@ -1,9 +1,10 @@
 import { GoogleGenAI } from '@google/genai';
 
-const WEBHOOK_URL = 'https://api.agents.snsihub.ai/webhook-test/Db';
+const WEBHOOK_URL = 'https://api.agents.snsihub.ai/webhook/Db';
 const keys = [
   import.meta.env.VITE_GEMINI_API_KEY || '',
-  import.meta.env.VITE_GEMINI_API_KEY_2 || ''
+  import.meta.env.VITE_GEMINI_API_KEY_2 || '',
+  import.meta.env.VITE_GEMINI_API_KEY_3 || ''
 ].filter(Boolean);
 
 let currentKeyIndex = 0;
@@ -134,6 +135,7 @@ CRITICAL RULES — MUST FOLLOW:
 7. No TypeScript. No JSX fragments as the top-level export. Always return a single root <div>.
 8. Code must be completely free of syntax errors, undefined variables, and runtime errors.
 9. The component must be fully functional with sample/demo data included inline.
+10. AESTHETICS ARE VERY IMPORTANT. The UI must be extremely premium, modern, and beautiful. Use smooth gradients, glassmorphism, dark/light sleek themes, subtle micro-animations, and modern typography.
 
 Project name: ${projectName}
 User request: ${prompt}
@@ -162,7 +164,8 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
   const timeout = setTimeout(() => controller.abort(), 120_000);
 
   try {
-    const fullPrompt = prompt + '\n' + getDbPrompt(dbConfig);
+    const premiumPrompt = "\n\nCRITICAL UI/UX REQUIREMENT: You must generate a design that is extremely premium, modern, and visually stunning. Use beautiful gradients, glassmorphism, micro-animations, rich aesthetic colors, and modern typography. Avoid generic, plain layouts.";
+    const fullPrompt = prompt + premiumPrompt + '\n' + getDbPrompt(dbConfig);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -224,6 +227,7 @@ CRITICAL RULES — MUST FOLLOW:
 6. The component MUST have: export default function ComponentName() { ... }
 7. Fix ALL existing syntax errors or undefined variables in the code.
 8. The component must be fully functional with sample data if needed.
+9. PREMIUM DESIGN: Retain and enhance any premium design aesthetics (gradients, glassmorphism, animations). Never downgrade the UI to look plain.
 
 Project name: ${projectName}
 Refinement Request: ${problemStatement}
@@ -284,7 +288,8 @@ Your job:
 5. Ensure ALL styles are inline (style={{}}). Remove any CSS class references to external stylesheets.
 6. Verify that the default export exists as: export default function ComponentName() { ... }
 7. CRITICAL: If the code uses a simulated backend, localStorage, or alert() popups to simulate saving data, you MUST completely rewrite those parts to use the Supabase real-time database exactly as instructed above!
-8. Fix ALL problems and return corrected code.
+8. AESTHETICS: Ensure the code produces an extremely premium, stunning, and modern UI. If the styling looks too basic, enhance it with gradients, shadows, and better spacing using inline styles.
+9. Fix ALL problems and return corrected code.
 9. Return a JSON object in this EXACT format:
 {
   "status": "ok" | "fixed",
@@ -341,4 +346,29 @@ Fix the code to resolve the error. Return ONLY the complete corrected raw JSX/Re
   } catch {
     return files;
   }
+};
+
+export const chatWithProject = async (files, userMessage) => {
+  return executeWithRoundRobin(async (ai) => {
+    const fileContext = Object.entries(files || {})
+      .map(([name, code]) => `File: ${name}\n\`\`\`javascript\n${code}\n\`\`\``)
+      .join('\n\n');
+
+    const prompt = `You are a helpful AI developer assistant embedded in a code editor.
+The user is asking you a question about their current workspace.
+
+Here are the current files in the workspace:
+${fileContext}
+
+User Message:
+${userMessage}
+
+Please answer the user's question concisely. If suggesting code, use markdown code blocks.`;
+
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return response.text;
+  });
 };

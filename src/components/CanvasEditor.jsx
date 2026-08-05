@@ -218,16 +218,9 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
     return unsub;
   }, [makeNodeData]);
 
-  // Manual file additions
-  useEffect(() => {
-    if (!manualFile) return;
-    setNodes(nds => [...nds, {
-      id: `manual-${manualFile.timestamp}`,
-      position: { x: 120 + Math.random() * 200, y: 120 + Math.random() * 150 },
-      type: 'customNode',
-      data: makeNodeData({ label: manualFile.name }),
-    }]);
-  }, [manualFile]);
+  // Manual file additions - now handled by newGeneratedFiles effect to avoid duplicates
+  // and ensure uploaded files are fully editable
+
 
   // AI-generated files → nodes
   useEffect(() => {

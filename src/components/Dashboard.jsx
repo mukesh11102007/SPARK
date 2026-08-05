@@ -204,6 +204,74 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
   );
 };
 
+const AccountSettings = () => {
+  const [pwForm, setPwForm] = React.useState({ current: '', next: '', confirm: '' });
+  const [pwMsg, setPwMsg] = React.useState(null);
+  const handlePwUpdate = () => {
+    const stored = localStorage.getItem('spark_password') || '';
+    if (stored && pwForm.current !== stored) { setPwMsg({ type: 'error', text: 'Current password is incorrect.' }); return; }
+    if (pwForm.next.length < 6) { setPwMsg({ type: 'error', text: 'New password must be at least 6 characters.' }); return; }
+    if (pwForm.next !== pwForm.confirm) { setPwMsg({ type: 'error', text: 'Passwords do not match.' }); return; }
+    localStorage.setItem('spark_password', pwForm.next);
+    setPwForm({ current: '', next: '', confirm: '' });
+    setPwMsg({ type: 'success', text: 'Password updated successfully!' });
+    setTimeout(() => setPwMsg(null), 3000);
+  };
+  const inp = { width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none', boxSizing: 'border-box' };
+  return (
+    <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <div>
+        <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Change Password</h3>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <input type="password" placeholder="Current Password" value={pwForm.current} onChange={e => setPwForm(p => ({...p, current: e.target.value}))} style={inp} />
+          <input type="password" placeholder="New Password (min 6 chars)" value={pwForm.next} onChange={e => setPwForm(p => ({...p, next: e.target.value}))} style={inp} />
+          <input type="password" placeholder="Confirm New Password" value={pwForm.confirm} onChange={e => setPwForm(p => ({...p, confirm: e.target.value}))} style={inp} />
+          {pwMsg && <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '0.8rem', background: pwMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: pwMsg.type === 'success' ? '#10B981' : '#ef4444', border: `1px solid ${pwMsg.type === 'success' ? '#10B981' : '#ef4444'}` }}>{pwMsg.text}</div>}
+          <button className="ide-btn" onClick={handlePwUpdate} style={{ padding: '8px 16px', width: 'fit-content', marginTop: '8px' }}>Update Password</button>
+        </div>
+      </div>
+      <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '24px' }}>
+        <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '8px' }}>Sign Out</h3>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px' }}>Sign out of your Spark Studio account on this device.</p>
+        <button onClick={() => { localStorage.clear(); window.location.reload(); }} style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '8px 16px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 }}>Sign Out</button>
+      </div>
+    </div>
+  );
+};
+
+const PreferencesSettings = () => {
+  const [prefs, setPrefs] = React.useState(() => {
+    try { return JSON.parse(localStorage.getItem('spark_prefs') || '{}'); } catch { return {}; }
+  });
+  const togglePref = (key) => {
+    const updated = { ...prefs, [key]: !prefs[key] };
+    setPrefs(updated);
+    localStorage.setItem('spark_prefs', JSON.stringify(updated));
+  };
+  const items = [
+    { label: 'Email Notifications', desc: 'Receive email alerts for deployments and team mentions.', key: 'emailNotif' },
+    { label: 'Weekly Summary', desc: 'Receive a weekly digest of your workspace activity.', key: 'weeklySummary' },
+    { label: 'Auto-save Code', desc: 'Automatically save code edits as you type.', key: 'autosave' },
+    { label: 'Sound Effects', desc: 'Play subtle sounds when actions complete.', key: 'sound' },
+  ];
+  return (
+    <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {items.map(({ label, desc, key }) => (
+        <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--panel-border)' }}>
+          <div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>{label}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</div>
+          </div>
+          <div onClick={() => togglePref(key)} style={{ width: '36px', height: '20px', background: prefs[key] ? 'var(--accent)' : '#555', borderRadius: '10px', position: 'relative', cursor: 'pointer', flexShrink: 0, transition: 'background 0.2s' }}>
+            <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', transition: 'left 0.2s', left: prefs[key] ? '18px' : '2px' }}></div>
+          </div>
+        </div>
+      ))}
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>✅ Preferences are saved automatically to your browser.</p>
+    </div>
+  );
+};
+
 export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTheme, members = [] }) => {
   const [activePage, setActivePage] = React.useState('home');
   const [recentWorkspaces, setRecentWorkspaces] = React.useState([]);
@@ -449,7 +517,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   tags={ws.tags || []} 
                   iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
                   iconEmoji={ws.iconEmoji || '💻'}
-                  onClick={() => onOpenWorkspace(ws.id)}
+                  onClick={() => onOpenWorkspace(ws.id, { title: ws.title })}
                   onRename={handleRenameWorkspace}
                   onDelete={handleDeleteWorkspace}
                 />
@@ -815,7 +883,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           <div style={{ width: '200px', borderRight: '1px solid var(--panel-border)', padding: '24px 0', overflowY: 'auto' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', padding: '0 24px', marginBottom: '16px' }}>Settings</h2>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {['Profile', 'Account', 'Preferences', 'Appearance', 'API Keys', 'Security'].map((item) => (
+              {['Profile', 'Account', 'Preferences', 'Appearance'].map((item) => (
                 <div key={item} onClick={() => setSettingsTab(item)} style={{ padding: '10px 24px', fontSize: '0.85rem', color: settingsTab===item?'var(--text-main)':'var(--text-muted)', background: settingsTab===item?'rgba(255,255,255,0.05)':'transparent', cursor: 'pointer', borderRight: settingsTab===item?'2px solid var(--text-main)':'2px solid transparent' }}>
                   {item}
                 </div>
@@ -883,54 +951,9 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               </div>
             )}
 
-            {settingsTab === 'Account' && (
-              <div style={{ maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                <div>
-                  <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Change Password</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <input type="password" placeholder="Current Password" style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
-                    <input type="password" placeholder="New Password" style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
-                    <button className="ide-btn" style={{ padding: '8px 16px', width: 'fit-content', marginTop: '8px' }}>Update Password</button>
-                  </div>
-                </div>
-                <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '24px' }}>
-                  <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Connected Accounts</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>GitHub</span>
-                      <button style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.8rem' }}>Connect</button>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '6px' }}>
-                      <span style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>Google</span>
-                      <button style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.8rem' }}>Connect</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {settingsTab === 'Account' && <AccountSettings />}
 
-            {settingsTab === 'Preferences' && (
-              <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--panel-border)' }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>Email Notifications</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Receive email alerts for deployments and team mentions.</div>
-                  </div>
-                  <div style={{ width: '36px', height: '20px', background: 'var(--accent)', borderRadius: '10px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', right: '2px' }}></div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '16px', borderBottom: '1px solid var(--panel-border)' }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>Weekly Summary</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Receive a weekly digest of your workspace activity.</div>
-                  </div>
-                  <div style={{ width: '36px', height: '20px', background: 'var(--accent)', borderRadius: '10px', position: 'relative', cursor: 'pointer' }}>
-                    <div style={{ width: '16px', height: '16px', background: '#fff', borderRadius: '50%', position: 'absolute', top: '2px', right: '2px' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
+            {settingsTab === 'Preferences' && <PreferencesSettings />}
 
             {settingsTab === 'Appearance' && (
               <div style={{ maxWidth: '500px' }}>
@@ -943,55 +966,6 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   <div onClick={() => setTheme && setTheme('light')} style={{ flex: 1, padding: '16px', background: 'var(--panel-bg)', border: `2px solid ${theme === 'light' ? 'var(--accent)' : 'var(--panel-border)'}`, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}>
                     <div style={{ width: '100%', height: '60px', background: '#fff', borderRadius: '4px', marginBottom: '12px', border: '1px solid rgba(0,0,0,0.1)' }}></div>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 500 }}>Light Mode</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {settingsTab === 'API Keys' && (
-              <div style={{ maxWidth: '600px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: 0 }}>Manage your personal access tokens.</p>
-                  <button className="ide-btn" style={{ padding: '6px 16px', fontSize: '0.8rem', width: 'auto' }}>Generate New Key</button>
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--panel-border)', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden' }}>
-                  <div style={{ padding: '16px', background: 'var(--panel-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>Production API Key</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>sk_live_**********************a8f9</div>
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Created 2 months ago</div>
-                  </div>
-                  <div style={{ padding: '16px', background: 'var(--panel-bg)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>Development API Key</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontFamily: 'monospace' }}>sk_test_**********************3b21</div>
-                    </div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Created yesterday</div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {settingsTab === 'Security' && (
-              <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                <div>
-                  <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Two-Factor Authentication</h3>
-                  <div style={{ padding: '16px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 500 }}>Authenticator App</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Not configured</div>
-                    </div>
-                    <button style={{ background: 'transparent', border: '1px solid var(--panel-border)', color: 'var(--text-main)', padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', cursor: 'pointer' }}>Enable</button>
-                  </div>
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Active Sessions</h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', background: 'var(--panel-border)', border: '1px solid var(--panel-border)', borderRadius: '8px', overflow: 'hidden' }}>
-                    <div style={{ padding: '16px', background: 'var(--panel-bg)' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 500 }}>Mac OS • Chrome</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>San Francisco, CA • Current Session</div>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -1220,7 +1194,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                       tags={ws.tags || []} 
                       iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
                       iconEmoji={ws.iconEmoji || '💻'}
-                      onClick={() => onOpenWorkspace(ws.id)} 
+                      onClick={() => onOpenWorkspace(ws.id, { title: ws.title })} 
                       onRename={handleRenameWorkspace}
                       onDelete={handleDeleteWorkspace}
                     />

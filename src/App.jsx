@@ -17,6 +17,7 @@ import { deployProject } from './services/DeployService';
 import { AuthModal } from './components/AuthModal';
 import { CodeEditor } from './components/CodeEditor';
 import { Dashboard } from './components/Dashboard';
+import { ProjectChatBot } from './components/ProjectChatBot';
 import { API_BASE_URL } from './config';
 
 // ── Sidebar sub-components ─────────────────────────────────────────────────────
@@ -47,18 +48,46 @@ const WorkflowDashboard = () => {
   );
 };
 
-const FileExplorer = ({ onAddFile }) => {
+const FileExplorer = ({ onAddFile, onFileUpload }) => {
   const [newFile, setNewFile] = useState('');
   const handleSubmit = (e) => {
     e.preventDefault();
     if (newFile.trim()) { onAddFile(newFile.trim()); setNewFile(''); }
   };
+  
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      onFileUpload(file.name, event.target.result);
+    };
+    reader.readAsText(file);
+    e.target.value = null; // Reset input
+  };
+
   return (
     <div className="sidebar-section">
-      <h3>
-        PROJECT FILES
-        <button className="ide-btn-icon" onClick={() => onAddFile('NewComponent.jsx')} title="Add File">+</button>
-      </h3>
+      <h3>PROJECT FILES</h3>
+      <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+        <label style={{ 
+          cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center', 
+          alignItems: 'center', gap: '6px', background: 'var(--accent-color, #4d3df7)', 
+          color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' 
+        }} title="Upload custom file">
+          <span style={{ fontSize: '14px' }}>⬆️</span> Upload
+          <input type="file" style={{ display: 'none' }} onChange={handleFileChange} />
+        </label>
+        <button 
+          onClick={() => onAddFile('NewComponent.jsx')} 
+          style={{
+            cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center', 
+            alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.1)', 
+            color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: 'none'
+          }} title="Create new file">
+          <span style={{ fontSize: '14px' }}>➕</span> New
+        </button>
+      </div>
       <form onSubmit={handleSubmit}>
         <input
           type="text"
@@ -897,6 +926,7 @@ function App() {
   const [wcBooted, setWcBooted] = useState(false);
   const [activeTab, setActiveTab] = useState('ai builder');
   const [activeActivity, setActiveActivity] = useState(() => localStorage.getItem('spark_active_activity') || 'explorer');
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeSourceFile, setActiveSourceFile] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('spark_theme') || 'antigravity');
   const [wcCrashLog, setWcCrashLog] = useState(null);
@@ -996,6 +1026,7 @@ function App() {
   const [members, setMembers] = useState([]);
   const [inviteToast, setInviteToast] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [workspaceCounter, setWorkspaceCounter] = useState(0);
 
   const userRole = (() => {
     if (!identity) return 'Owner';
@@ -1094,7 +1125,7 @@ function App() {
       window.__sparkOnRemoteCodeGenerated = null;
       window.__sparkOnRemoteNotification = null;
     };
-  }, [identity]);
+  }, [identity, workspaceCounter]);
 
   // Called by IntentToApp — triggers review pipeline instead of direct canvas apply
   const setAndBroadcastFiles = useCallback(async (files, originalPrompt, projectName, isEnhance, targetFilename) => {
@@ -1160,6 +1191,14 @@ function App() {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ action: 'commit', details: `Committed ${Object.keys(files).length} files` })
             });
+
+            if (import.meta.env.VITE_DIGEST_WEBHOOK_URL) {
+              fetch(import.meta.env.VITE_DIGEST_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'commit', user: identity.name, workspaceId, filesCommitted: Object.keys(files).length })
+              }).catch(e => console.error("Webhook failed:", e));
+            }
           }
         } catch (e) {
           console.error('Failed to save to MongoDB:', e);
@@ -1203,6 +1242,18 @@ function App() {
       return updated;
     });
     setManualFile({ name: filename, timestamp: Date.now() });
+  };
+
+  const handleFileUpload = (filename, content) => {
+    setGeneratedFiles(prev => {
+      const updated = { ...(prev || {}), [filename]: content };
+      if (workspaceType === 'personal') updatePersonalFiles(updated);
+      else setTeamFiles(updated);
+      return updated;
+    });
+    // Auto-select uploaded file and switch to source editor so user can edit it immediately
+    setActiveSourceFile(filename);
+    setActiveActivity('source');
   };
 
   const handleDeleteFile = (filename) => {
@@ -1291,6 +1342,7 @@ function App() {
   };
 
   const renderSidebar = () => {
+
     if (activeActivity === 'settings') {
       return (
         <SettingsPanel 
@@ -1378,7 +1430,7 @@ function App() {
     }
     return (
       <>
-        <FileExplorer onAddFile={handleAddManualFile} />
+        <FileExplorer onAddFile={handleAddManualFile} onFileUpload={handleFileUpload} />
         <DatabasePanel />
         {members.length > 0 && (
           <div className="sidebar-section">
@@ -1414,13 +1466,20 @@ function App() {
     return <AuthModal onLogin={setIdentity} />;
   }
 
-  if (currentView === 'dashboard') {
-    return <Dashboard 
+  const renderAppContent = () => {
+    if (currentView === 'dashboard') {
+      return (
+        <Dashboard 
       identity={identity} 
       setIdentity={setIdentity}
       members={members}
       onOpenWorkspace={(type, options = {}) => {
+        const url = new URL(window.location.href);
+
         if (type === 'new') {
+          url.searchParams.delete('workspace');
+          window.history.replaceState({}, '', url.toString());
+
           if (options.initialPrompt) {
             const promptTitle = options.initialPrompt.length > 25 ? options.initialPrompt.substring(0, 25) + '...' : options.initialPrompt;
             setPersonalProjectName(promptTitle);
@@ -1441,22 +1500,32 @@ function App() {
           } else {
             setGeneratedFiles({});
             setPersonalFiles({});
+            setTeamFiles(null);
             setPersonalProjectName('New Project');
             setWorkspaceType('personal');
           }
           if (options.tab) setActiveTab(options.tab);
           if (options.activity) setActiveActivity(options.activity);
+        } else if (typeof type === 'string') {
+          url.searchParams.set('workspace', type);
+          window.history.replaceState({}, '', url.toString());
+          
+          if (options.title) {
+            setPersonalProjectName(options.title);
+          }
         }
+        setWorkspaceCounter(prev => prev + 1);
         setCurrentView('ide');
       }} 
       theme={theme}
       setTheme={setTheme}
-    />;
-  }
+    />
+      );
+    }
 
-  return (
-    <AutomationProvider>
-      <div className="ide-layout">
+    return (
+      <AutomationProvider>
+        <div className="ide-layout">
 
         {/* Activity Bar */}
         <div className="activity-bar">
@@ -1549,6 +1618,14 @@ function App() {
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                               body: JSON.stringify({ action: 'commit', details: `Merged personal files to team` })
                             });
+
+                            if (import.meta.env.VITE_DIGEST_WEBHOOK_URL) {
+                              fetch(import.meta.env.VITE_DIGEST_WEBHOOK_URL, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ action: 'commit', user: identity.name, workspaceId: wsId, details: 'Merged personal files to team' })
+                              }).catch(e => console.error("Webhook failed:", e));
+                            }
                           }
                         } catch (e) {}
                         broadcastNotification(`${identity.name} pushed personal files to the team workspace.`, 'info');
@@ -1724,7 +1801,45 @@ function App() {
           ))}
         </div>
       )}
-    </AutomationProvider>
+      </AutomationProvider>
+    );
+  };
+
+  return (
+    <>
+      {renderAppContent()}
+
+      {/* Floating Chat Widget Global */}
+      <div style={{
+        position: 'fixed', bottom: '24px', right: '24px', zIndex: 9999,
+        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px'
+      }}>
+        {isChatOpen && (
+          <div style={{
+            width: '380px', height: '500px', background: 'var(--panel-elevated)',
+            borderRadius: '12px', boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--panel-border)', overflow: 'hidden',
+            animation: 'slideUp 0.2s ease-out',
+            backdropFilter: 'blur(20px)'
+          }}>
+            <ProjectChatBot files={generatedFiles} />
+          </div>
+        )}
+        <button
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          style={{
+            width: '60px', height: '60px', borderRadius: '50%',
+            background: 'var(--accent-color, #4d3df7)', color: '#fff', border: 'none',
+            boxShadow: '0 4px 15px rgba(0,0,0,0.3)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '28px', transition: 'transform 0.2s'
+          }}
+          title="Toggle AI Assistant"
+        >
+          {isChatOpen ? '✕' : '💬'}
+        </button>
+      </div>
+    </>
   );
 }
 
