@@ -97,56 +97,111 @@ const Card = ({ title, subtitle, icon, color, buttonBg, buttonText, onClick }) =
   </div>
 );
 
-const WorkspaceCard = ({ title, time, tags, iconColor, iconEmoji, onClick }) => (
-  <div 
-    onClick={onClick}
-    style={{
-      background: 'var(--panel-bg)',
-      borderRadius: '12px',
-      padding: '16px',
-      border: '1px solid var(--panel-border)',
-      cursor: 'pointer',
-      transition: 'all 0.2s'
-    }}
-    onMouseEnter={e => {
-      e.currentTarget.style.borderColor = 'var(--panel-border-hover)';
-      e.currentTarget.style.background = 'var(--panel-elevated)';
-    }}
-    onMouseLeave={e => {
-      e.currentTarget.style.borderColor = 'var(--panel-border)';
-      e.currentTarget.style.background = 'var(--panel-bg)';
-    }}
-  >
-    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-      <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-        <div style={{ 
-          width: 34, height: 34, borderRadius: '8px', 
-          background: iconColor,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', fontSize: '1.1rem'
-        }}>{iconEmoji}</div>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)', marginBottom: '2px' }}>{title}</div>
-          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Updated {time}</div>
+const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, onRename, onDelete }) => {
+  const [menuOpen, setMenuOpen] = React.useState(false);
+  const menuRef = React.useRef();
+
+  React.useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, []);
+
+  return (
+    <div 
+      onClick={onClick}
+      style={{
+        background: 'var(--panel-bg)',
+        borderRadius: '12px',
+        padding: '16px',
+        border: '1px solid var(--panel-border)',
+        cursor: 'pointer',
+        transition: 'all 0.2s',
+        position: 'relative'
+      }}
+      onMouseEnter={e => {
+        e.currentTarget.style.borderColor = 'var(--panel-border-hover)';
+        e.currentTarget.style.background = 'var(--panel-elevated)';
+      }}
+      onMouseLeave={e => {
+        e.currentTarget.style.borderColor = 'var(--panel-border)';
+        e.currentTarget.style.background = 'var(--panel-bg)';
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <div style={{ 
+            width: 34, height: 34, borderRadius: '8px', 
+            background: iconColor,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', fontSize: '1.1rem'
+          }}>{iconEmoji}</div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)', marginBottom: '2px' }}>{title}</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Updated {time}</div>
+          </div>
+        </div>
+        <div 
+          ref={menuRef}
+          onClick={(e) => { e.stopPropagation(); setMenuOpen(!menuOpen); }}
+          style={{ color: 'var(--text-muted)', position: 'relative', padding: '4px', cursor: 'pointer' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/>
+          </svg>
+          {menuOpen && (
+            <div style={{
+              position: 'absolute',
+              top: '24px',
+              right: 0,
+              background: 'var(--panel-elevated)',
+              border: '1px solid var(--panel-border)',
+              borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+              zIndex: 100,
+              width: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '4px 0'
+            }}>
+              <div 
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onRename(id, title); }}
+                style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--text-main)' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                ✏️ Rename
+              </div>
+              <div 
+                onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(id); }}
+                style={{ padding: '8px 12px', fontSize: '0.8rem', color: '#ff6b6b' }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              >
+                🗑️ Delete
+              </div>
+            </div>
+          )}
         </div>
       </div>
-      <div style={{ color: 'var(--text-muted)' }}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+      <div style={{ display: 'flex', gap: '8px' }}>
+        {tags.map(t => (
+          <span key={t} style={{ 
+            background: 'rgba(255,255,255,0.06)', 
+            padding: '4px 10px', 
+            borderRadius: '4px', 
+            fontSize: '0.65rem',
+            color: 'var(--text-muted)',
+            fontWeight: 500
+          }}>{t}</span>
+        ))}
       </div>
     </div>
-    <div style={{ display: 'flex', gap: '8px' }}>
-      {tags.map(t => (
-        <span key={t} style={{ 
-          background: 'rgba(255,255,255,0.06)', 
-          padding: '4px 10px', 
-          borderRadius: '4px', 
-          fontSize: '0.65rem',
-          color: 'var(--text-muted)',
-          fontWeight: 500
-        }}>{t}</span>
-      ))}
-    </div>
-  </div>
-);
+  );
+};
 
 export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTheme, members = [] }) => {
   const [activePage, setActivePage] = React.useState('home');
@@ -179,6 +234,37 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     localStorage.setItem('spark_team_ws_name', val);
     import('../services/SupabaseService').then(({ broadcastWorkspaceNameUpdate }) => {
       broadcastWorkspaceNameUpdate(val);
+    });
+  };
+
+  const handleRenameWorkspace = (id, oldTitle) => {
+    const newTitle = prompt("Enter new name for workspace:", oldTitle);
+    if (!newTitle || newTitle.trim() === '') return;
+    
+    setRecentWorkspaces(prev => {
+      const updated = prev.map(w => w.id === id ? { ...w, title: newTitle.trim() } : w);
+      localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const handleDeleteWorkspace = async (id) => {
+    if (!confirm("Are you sure you want to delete this workspace? This cannot be undone.")) return;
+    
+    try {
+      const token = localStorage.getItem('spark_token');
+      await fetch(`http://localhost:3001/api/workspace/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+    } catch (e) {
+      console.error("Failed to delete workspace on backend", e);
+    }
+
+    setRecentWorkspaces(prev => {
+      const updated = prev.filter(w => w.id !== id);
+      localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
+      return updated;
     });
   };
   const [memberRoles, setMemberRoles] = React.useState(() => {
@@ -356,12 +442,15 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               {recentWorkspaces.map(ws => (
                 <WorkspaceCard 
                   key={ws.id}
+                  id={ws.id}
                   title={ws.title} 
                   time={ws.time || 'just now'} 
                   tags={ws.tags || []} 
                   iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
                   iconEmoji={ws.iconEmoji || '💻'}
-                  onClick={() => onOpenWorkspace(ws.id)} 
+                  onClick={() => onOpenWorkspace(ws.id)}
+                  onRename={handleRenameWorkspace}
+                  onDelete={handleDeleteWorkspace}
                 />
               ))}
             </div>
@@ -1124,12 +1213,15 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   {filteredWorkspaces.map(ws => (
                     <WorkspaceCard 
                       key={ws.id}
+                      id={ws.id}
                       title={ws.title} 
                       time={ws.time || 'just now'} 
                       tags={ws.tags || []} 
                       iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
                       iconEmoji={ws.iconEmoji || '💻'}
                       onClick={() => onOpenWorkspace(ws.id)} 
+                      onRename={handleRenameWorkspace}
+                      onDelete={handleDeleteWorkspace}
                     />
                   ))}
                 </div>
