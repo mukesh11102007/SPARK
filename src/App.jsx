@@ -17,6 +17,7 @@ import { deployProject } from './services/DeployService';
 import { AuthModal } from './components/AuthModal';
 import { CodeEditor } from './components/CodeEditor';
 import { Dashboard } from './components/Dashboard';
+import { API_BASE_URL } from './config';
 
 // ── Sidebar sub-components ─────────────────────────────────────────────────────
 
@@ -247,7 +248,7 @@ const ActionsPanel = ({ onSimulateCrash }) => {
     const wsId = localStorage.getItem('spark_workspace_id');
     if (!token || !wsId) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/workspace/${wsId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/workspace/${wsId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -286,7 +287,7 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
       if (!token) return;
       setLoadingMembers(true);
       try {
-        const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}/members`, {
+        const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/members`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) setWorkspaceMembers(await res.json());
@@ -303,7 +304,7 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
     const token = localStorage.getItem('spark_token');
     if (!token) return;
     try {
-      const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}/member`, {
+      const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/member`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ targetUserId, role: newRole })
@@ -1020,7 +1021,7 @@ function App() {
       try {
         const token = localStorage.getItem('spark_token');
         if (!token) return;
-        const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+        const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) {
@@ -1041,7 +1042,7 @@ function App() {
                 }
                 logActivity(`Migrated ${Object.keys(supaFiles).length} files from Supabase history.`);
                 // Save to MongoDB to complete migration
-                fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+                fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                   body: JSON.stringify({ files: supaFiles })
@@ -1148,13 +1149,13 @@ function App() {
         try {
           const token = localStorage.getItem('spark_token');
           if (token) {
-            fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+            fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ files })
             });
             
-            fetch(`http://localhost:3001/api/workspace/${workspaceId}/commit`, {
+            fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/commit`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ action: 'commit', details: `Committed ${Object.keys(files).length} files` })
@@ -1218,7 +1219,7 @@ function App() {
         try {
           const token = localStorage.getItem('spark_token');
           if (token) {
-            fetch(`http://localhost:3001/api/workspace/${workspaceId}`, {
+            fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ files: newFiles })
@@ -1538,12 +1539,12 @@ function App() {
                         try {
                           const token = localStorage.getItem('spark_token');
                           if (token) {
-                            fetch(`http://localhost:3001/api/workspace/${wsId}`, {
+                            fetch(`${API_BASE_URL}/api/workspace/${wsId}`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                               body: JSON.stringify({ files: mergedFiles })
                             });
-                            fetch(`http://localhost:3001/api/workspace/${wsId}/commit`, {
+                            fetch(`${API_BASE_URL}/api/workspace/${wsId}/commit`, {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                               body: JSON.stringify({ action: 'commit', details: `Merged personal files to team` })

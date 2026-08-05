@@ -1,4 +1,5 @@
 import React from 'react';
+import { API_BASE_URL } from '../config';
 
 const SidebarIcon = ({ path, label, active, onClick }) => (
   <div onClick={onClick} style={{
@@ -253,7 +254,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     
     try {
       const token = localStorage.getItem('spark_token');
-      await fetch(`http://localhost:3001/api/workspace/${id}`, {
+      await fetch(`${API_BASE_URL}/api/workspace/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -300,7 +301,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       const token = localStorage.getItem('spark_token');
       if (!token) return;
       try {
-        const res = await fetch(`http://localhost:3001/api/workspace/${workspaceId}/members`, {
+        const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/members`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         if (res.ok) setDbMembers(await res.json());
@@ -322,7 +323,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     if (workspaceId) {
       try {
         const token = localStorage.getItem('spark_token');
-        await fetch(`http://localhost:3001/api/workspace/${workspaceId}/member`, {
+        await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/member`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ targetUserId: memberKey, role: newRole === 'Viewer' ? 'member' : (newRole === 'Admin' ? 'admin' : 'member') }) // Mapping to backend roles roughly
@@ -358,7 +359,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     try {
       const token = localStorage.getItem('spark_token');
       if (token) {
-        await fetch('http://localhost:3001/api/user/profile', {
+        await fetch(`${API_BASE_URL}/api/user/profile`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify({ name: profileForm.name, bio: profileForm.bio, avatarUrl: profileForm.avatarUrl })
