@@ -155,6 +155,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
   const [settingsTab, setSettingsTab] = React.useState('Profile');
   const [selectedTemplate, setSelectedTemplate] = React.useState(null);
   const [builderPrompt, setBuilderPrompt] = React.useState('');
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [workspaceOwnerEmail] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
     const urlOwner = params.get('owner');
@@ -499,7 +500,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
 
           <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '16px' }}>Deployments</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {recentWorkspaces.length > 0 ? recentWorkspaces.map(ws => (
+            {recentWorkspaces.filter(ws => ws.title.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? recentWorkspaces.filter(ws => ws.title.toLowerCase().includes(searchQuery.toLowerCase())).map(ws => (
               <div key={ws.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'var(--panel-bg)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'var(--panel-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📦</div>
@@ -1269,13 +1270,13 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 60px 12px' }}>
           <div style={{ position: 'relative', width: '320px' }}>
             <svg style={{ position: 'absolute', left: 12, top: 9, color: 'var(--text-muted)' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" placeholder="Search anything..." style={{ width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--panel-border)', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none' }} />
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search workspaces..." style={{ width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--panel-border)', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none' }} />
             <div style={{ position: 'absolute', right: 12, top: 8, fontSize: '0.65rem', color: 'var(--text-muted)', border: '1px solid var(--panel-border)', padding: '2px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>⌘K</div>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
             <svg onClick={() => setTheme && setTheme(theme === 'light' ? 'antigravity' : 'light')} style={{ cursor: 'pointer' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <svg style={{ cursor: 'pointer' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <svg onClick={() => alert("Notification center coming soon! For now, your live notifications will appear as popups on the screen.")} style={{ cursor: 'pointer' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
             {identity?.avatarUrl ? (
               <img src={identity.avatarUrl} alt="User" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }} />
             ) : (

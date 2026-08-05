@@ -468,3 +468,4 @@ body {
   width: 32px;
   height: 32px;
 }
+@keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }

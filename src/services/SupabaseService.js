@@ -43,6 +43,16 @@ export const broadcastWorkspaceNameUpdate = (newName) => {
   }
 };
 
+export const broadcastNotification = (message, type = 'info') => {
+  if (presenceChannel) {
+    presenceChannel.send({
+      type: 'broadcast',
+      event: 'notification',
+      payload: { message, type }
+    });
+  }
+};
+
 // ── User identity (stored in localStorage) ────────────────────────────────────
 const COLORS = ['#ff7b72','#79c0ff','#d2a8ff','#56d364','#ffa657','#f78166','#58a6ff'];
 export const getOrCreateUserIdentity = () => {
@@ -117,6 +127,11 @@ export const joinWorkspacePresence = (workspaceId, identity, onPresenceChange) =
     .on('broadcast', { event: 'workspace_name_updated' }, ({ payload }) => {
       if (payload && window.__sparkOnRemoteWorkspaceNameUpdate) {
         window.__sparkOnRemoteWorkspaceNameUpdate(payload);
+      }
+    })
+    .on('broadcast', { event: 'notification' }, ({ payload }) => {
+      if (payload && window.__sparkOnRemoteNotification) {
+        window.__sparkOnRemoteNotification(payload.message, payload.type);
       }
     })
     .subscribe(async (status) => {

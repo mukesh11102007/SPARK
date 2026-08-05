@@ -4,6 +4,7 @@ import mongoose from 'mongoose';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import cron from 'node-cron';
 
 const app = express();
 app.use(cors());
@@ -35,6 +36,15 @@ const workspaceSchema = new mongoose.Schema({
   }],
 });
 const Workspace = mongoose.model('Workspace', workspaceSchema);
+
+const activityLogSchema = new mongoose.Schema({
+  workspaceId: { type: String, required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  action: { type: String, required: true },
+  details: { type: String },
+  timestamp: { type: Date, default: Date.now }
+});
+const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-spark-key-123';
 
@@ -183,6 +193,101 @@ app.put('/api/workspace/:id/member', auth, async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/workspace/:id', auth, async (req, res) => {
+  try {
+    let workspace = await Workspace.findOne({ workspaceId: req.params.id });
+    if (!workspace) return res.status(404).json({ error: 'Workspace not found' });
+    
+    const isOwner = workspace.members.some(m => m.userId.toString() === req.user.id && m.role === 'owner');
+    if (!isOwner) return res.status(403).json({ error: 'Only owners can delete the workspace' });
+
+    await Workspace.deleteOne({ _id: workspace._id });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/workspace/:id/commit', auth, async (req, res) => {
+  try {
+    const { action, details } = req.body;
+    const log = new ActivityLog({
+      workspaceId: req.params.id,
+      userId: req.user.id,
+      action: action || 'commit',
+      details: details || 'Committed changes'
+    });
+    await log.save();
+    
+    // Fire instant webhook if configured
+    const webhookUrl = process.env.INSTANT_WEBHOOK_URL;
+    if (webhookUrl) {
+      const user = await User.findById(req.user.id);
+      fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId: req.params.id,
+          user: user.name,
+          email: user.email,
+          action: log.action,
+          details: log.details,
+          timestamp: log.timestamp
+        })
+      }).catch(err => console.error('[Webhook] Failed to send instant webhook', err));
+    }
+    
+    res.json({ success: true, log });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Setup Daily Digest Cron Job (runs at 9:00 AM every day)
+cron.schedule('0 9 * * *', async () => {
+  console.log('[Cron] Running daily digest job at 9:00 AM');
+  const digestWebhookUrl = process.env.DIGEST_WEBHOOK_URL;
+  if (!digestWebhookUrl) {
+    console.log('[Cron] DIGEST_WEBHOOK_URL not set, skipping');
+    return;
+  }
+  
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const logs = await ActivityLog.find({ timestamp: { $gte: yesterday } }).populate('userId', 'name email');
+    if (logs.length === 0) return;
+    
+    // Group logs by workspace
+    const grouped = logs.reduce((acc, log) => {
+      if (!acc[log.workspaceId]) acc[log.workspaceId] = [];
+      acc[log.workspaceId].push({
+        user: log.userId.name,
+        email: log.userId.email,
+        action: log.action,
+        details: log.details,
+        time: log.timestamp
+      });
+      return acc;
+    }, {});
+    
+    // Send to webhook
+    await fetch(digestWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reportType: 'daily_digest',
+        date: new Date().toISOString(),
+        workspaces: grouped
+      })
+    }).catch(err => console.error('[Webhook] Error fetching digest webhook', err));
+    console.log('[Cron] Daily digest sent to webhook successfully');
+  } catch (err) {
+    console.error('[Cron] Error running daily digest', err);
   }
 });
 

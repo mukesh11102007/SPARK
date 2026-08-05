@@ -25,6 +25,25 @@ export const deployToVercel = async (filesMap, projectName = 'spark-generated-ap
     throw new Error(result.error?.message || 'Deployment failed');
   }
 
+  // Disable Vercel Authentication (SSO Protection) for this project
+  if (result.projectId) {
+    try {
+      await fetch(`https://api.vercel.com/v9/projects/${result.projectId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ssoProtection: { deploymentType: null },
+          passwordProtection: null
+        }),
+      });
+    } catch (err) {
+      console.warn('[Vercel Deploy] Failed to disable SSO protection', err);
+    }
+  }
+
   // Vercel returns the URL as result.url
   return `https://${result.url}`;
 };

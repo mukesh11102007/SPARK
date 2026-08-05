@@ -33,8 +33,8 @@ const transformCodeForBrowser = (code) => {
 
   // Step 3: Prepend React hooks destructuring
   const prefix = destructured.size > 0
-    ? `const { ${[...destructured].join(', ')} } = React;\n`
-    : `const { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext } = React;\n`;
+    ? `var { ${[...destructured].join(', ')} } = React;\n`
+    : `var { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext } = React;\n`;
 
   // Step 4: Register component at end
   const suffix = componentName ? `\nwindow.DefaultExport = ${componentName};` : '';
@@ -58,6 +58,7 @@ const buildStandaloneHtml = (filesMap, projectName) => {
     <meta name="description" content="Built with SPARK Studio" />
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/regenerator-runtime@0.14.0/runtime.js"></script>
     <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -102,6 +103,23 @@ const buildStandaloneHtml = (filesMap, projectName) => {
 </html>`;
 };
 
+const getTeamId = async (token) => {
+  try {
+    const res = await fetch('https://api.vercel.com/v2/teams', {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.teams && data.teams.length > 0) {
+        return data.teams[0].id;
+      }
+    }
+  } catch (e) {
+    console.error('[Vercel] Failed to fetch team ID', e);
+  }
+  return null;
+};
+
 export const deployProject = async (filesMap, projectName = 'spark-app', workspaceId = '') => {
   if (!filesMap || Object.keys(filesMap).length === 0) {
     throw new Error('No files to deploy. Generate a component first.');
@@ -120,7 +138,10 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
 
   const html = buildStandaloneHtml(filesMap, projectName);
 
-  const response = await fetch('https://api.vercel.com/v13/deployments', {
+  const teamId = await getTeamId(token);
+  const teamParam = teamId ? `?teamId=${teamId}` : '';
+
+  const response = await fetch(`https://api.vercel.com/v13/deployments${teamParam}`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${token}`,
@@ -138,6 +159,28 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
   if (!response.ok) {
     console.error('[Vercel Deploy Error]', result);
     throw new Error(result.error?.message || `Deployment failed (${response.status})`);
+  }
+
+  // Disable Vercel Authentication (SSO Protection) for this project
+  if (result.projectId) {
+    try {
+      const patchRes = await fetch(`https://api.vercel.com/v9/projects/${result.projectId}${teamParam}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ssoProtection: null,
+          passwordProtection: null
+        }),
+      });
+      if (!patchRes.ok) {
+        console.warn('[Vercel Deploy] PATCH request failed with status:', patchRes.status, await patchRes.json());
+      }
+    } catch (err) {
+      console.warn('[Vercel Deploy] Failed to disable SSO protection', err);
+    }
   }
 
   const deployUrl = result.url;

@@ -103,13 +103,14 @@ The user has provisioned a real Supabase database. You MUST write this component
 - Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
 - Initialize the client OUTSIDE the component: 
   \`const supabase = window.supabase.createClient('${dbConfig.url}', '${dbConfig.anonKey}');\`
-- Use the table name: '${dbConfig.table}' (this is a NoSQL-like logs table).
-- The table schema is: \`id\` (UUID, generated automatically), \`created_at\` (timestamp), \`workspace_id\` (text), \`payload\` (JSONB).
-- ALWAYS insert data with the workspace ID: 
-  \`{ workspace_id: '${dbConfig.workspaceId}', payload: { type: 'YourModelName', ...yourData } }\`
-- ALWAYS fetch data filtered by the workspace ID:
-  \`supabase.from('${dbConfig.table}').select('*').eq('workspace_id', '${dbConfig.workspaceId}')\`
-- Extract your actual data from the \`payload\` column when reading (e.g. \`item.payload.title\`).
+- Use the exact table name: '${dbConfig.table}' (this is a NoSQL-like logs table).
+- The ONLY columns in this table are: \`id\`, \`created_at\`, \`workspace_id\`, and \`payload\`.
+- CRITICAL: You CANNOT insert custom columns like 'name', 'price', etc. You MUST wrap ALL your app data inside the JSONB \`payload\` column!
+- Example Insert:
+  \`await supabase.from('${dbConfig.table}').insert([{ workspace_id: '${dbConfig.workspaceId}', payload: { type: 'YourModelName', field1: 'value1', field2: 'value2' } }]);\`
+- Example Fetch:
+  \`const { data } = await supabase.from('${dbConfig.table}').select('*').eq('workspace_id', '${dbConfig.workspaceId}');\`
+- Extract your actual data from the \`payload\` column when reading (e.g. \`item.payload.field1\`).
 - IMPORTANT: Set up real-time subscriptions in a useEffect to listen for inserts/updates/deletes on this table:
   \`supabase.channel('custom-all-channel').on('postgres_changes', { event: '*', schema: 'public', table: '${dbConfig.table}', filter: 'workspace_id=eq.${dbConfig.workspaceId}' }, (payload) => { /* handle realtime update */ }).subscribe();\`
 - The UI MUST reflect real data fetched from this Supabase table.
@@ -250,11 +251,16 @@ Remember: ONLY return the raw code.`
 };
 
 // ── Review & auto-fix generated code before applying to canvas ────────────────
-export const reviewAndFixCode = async (files, originalPrompt, projectName, dbConfig) => {
-  const firstFile = Object.entries(files)[0];
-  if (!firstFile) return { files, review: null };
+export const reviewAndFixCode = async (files, originalPrompt, projectName, dbConfig, targetFilename = null) => {
+  let filename = targetFilename;
+  let code = filename ? files[filename] : null;
 
-  const [filename, code] = firstFile;
+  if (!filename || !code) {
+    const firstFile = Object.entries(files)[0];
+    if (!firstFile) return { files, review: null };
+    filename = firstFile[0];
+    code = firstFile[1];
+  }
 
   const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
     model: 'gemini-2.5-flash',

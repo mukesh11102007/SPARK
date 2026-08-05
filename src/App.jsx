@@ -8,7 +8,7 @@ import { CodeReviewPanel } from './components/CodeReviewPanel';
 import { UserIdentityModal } from './components/UserIdentityModal';
 import {
   getOrCreateUserIdentity, getOrCreateWorkspaceId, getWorkspaceInviteUrl,
-  joinWorkspacePresence, broadcastCodeGenerated, fetchWorkspaceFiles
+  joinWorkspacePresence, broadcastCodeGenerated, fetchWorkspaceFiles, broadcastNotification
 } from './services/SupabaseService';
 import { provisionUserDatabase, fetchWorkspaceDatabase } from './services/DatabaseService';
 import sdk from '@stackblitz/sdk';
@@ -71,7 +71,7 @@ const FileExplorer = ({ onAddFile }) => {
   );
 };
 
-const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, setProjectName }) => {
+const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, setProjectName, workspaceId, setDbConfig }) => {
   const [isListening, setIsListening] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -108,20 +108,29 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
     setStatusMsg(isEnhance ? '✨ Enhancing your code...' : cookingMessages[Math.floor(Math.random() * cookingMessages.length)]);
 
     try {
+      // Auto-provision database if user asks for real-time or db
+      let activeDbConfig = dbConfig;
+      const lowerInput = finalInput.toLowerCase();
+      if (!activeDbConfig && workspaceId && (lowerInput.includes('real time') || lowerInput.includes('real-time') || lowerInput.includes('database') || lowerInput.includes('db'))) {
+        setStatusMsg('🔌 Auto-provisioning database...');
+        activeDbConfig = await provisionUserDatabase(workspaceId);
+        setDbConfig(activeDbConfig);
+      }
+
       let code;
       if (isEnhance) {
         let mainCode = generatedFiles[selectedFile];
         if (!mainCode) { alert('Selected file not found!'); return; }
 
-        const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, selectedFile, dbConfig, generatedFiles);
+        const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, selectedFile, activeDbConfig, generatedFiles);
         code = { ...generatedFiles, ...enhancedCode };
       } else {
-        const newCode = await generateAppFromVoice(finalInput, finalProjectName, dbConfig);
+        const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig);
         code = { ...(generatedFiles || {}), ...newCode };
       }
 
       setStatusMsg(isEnhance ? '✨ Enhancing & reviewing...' : '🔍 Reviewing code before applying...');
-      onAppGenerated(code, finalInput, finalProjectName, isEnhance);
+      onAppGenerated(code, finalInput, finalProjectName, isEnhance, isEnhance ? selectedFile : null);
       setTextInput('');
       setTimeout(() => setStatusMsg(''), 3000);
     } catch (e) {
@@ -232,11 +241,36 @@ const ActionsPanel = ({ onSimulateCrash }) => {
     }
   };
 
+  const handleDeleteWorkspace = async () => {
+    if (!window.confirm("Are you sure you want to completely delete this workspace? This cannot be undone.")) return;
+    const token = localStorage.getItem('spark_token');
+    const wsId = localStorage.getItem('spark_workspace_id');
+    if (!token || !wsId) return;
+    try {
+      const res = await fetch(`http://localhost:3001/api/workspace/${wsId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        localStorage.removeItem('spark_workspace_id');
+        window.location.href = '/';
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete workspace');
+      }
+    } catch (e) {
+      alert('Error deleting workspace: ' + e.message);
+    }
+  };
+
   return (
     <div className="sidebar-section">
       <h3>ACTIONS</h3>
       <button className="ide-btn ide-btn-secondary" onClick={handleCrash} disabled={isPatching}>
         {isPatching ? 'Patching via Watchdog...' : '⚠️ Simulate WC Crash'}
+      </button>
+      <button className="ide-btn" onClick={handleDeleteWorkspace} style={{ marginTop: '10px', background: 'rgba(220, 53, 69, 0.2)', color: '#ff6b6b', border: '1px solid #ff6b6b' }}>
+        🗑️ Delete Workspace
       </button>
     </div>
   );
@@ -876,6 +910,17 @@ function App() {
     localStorage.setItem('spark_active_activity', activeActivity);
   }, [activeActivity]);
 
+  // Auto-select activeSourceFile when files are loaded
+  useEffect(() => {
+    if (generatedFiles && Object.keys(generatedFiles).length > 0) {
+      if (!activeSourceFile || !generatedFiles[activeSourceFile]) {
+        // Prefer files containing App.jsx or the first file
+        const firstFile = Object.keys(generatedFiles).find(f => f.toLowerCase().includes('app.jsx')) || Object.keys(generatedFiles)[0];
+        setActiveSourceFile(firstFile);
+      }
+    }
+  }, [generatedFiles, activeSourceFile]);
+
   useEffect(() => {
     localStorage.setItem('spark_workspace_type', workspaceType);
   }, [workspaceType]);
@@ -949,6 +994,7 @@ function App() {
   });
   const [members, setMembers] = useState([]);
   const [inviteToast, setInviteToast] = useState(false);
+  const [notifications, setNotifications] = useState([]);
 
   const userRole = (() => {
     if (!identity) return 'Owner';
@@ -1033,23 +1079,30 @@ function App() {
       setGeneratedFiles(prev => ({ ...prev, ...files }));
       logActivity(`Remote teammate generated: ${Object.keys(files).join(', ')}`);
     };
+    
+    window.__sparkOnRemoteNotification = (message, type) => {
+      setNotifications(prev => [...prev, { id: Date.now(), message, type }]);
+      setTimeout(() => setNotifications(prev => prev.slice(1)), 5000);
+    };
+
     const unsubscribe = joinWorkspacePresence(workspaceId, identity, (newMembers) => {
       setMembers([...newMembers]);
     });
     return () => {
       unsubscribe();
       window.__sparkOnRemoteCodeGenerated = null;
+      window.__sparkOnRemoteNotification = null;
     };
   }, [identity]);
 
   // Called by IntentToApp — triggers review pipeline instead of direct canvas apply
-  const setAndBroadcastFiles = useCallback(async (files, originalPrompt, projectName) => {
+  const setAndBroadcastFiles = useCallback(async (files, originalPrompt, projectName, isEnhance, targetFilename) => {
     setActiveTab('ai builder');
     setPendingReview({ files, prompt: originalPrompt || '', projectName: projectName || '', reviewResult: null });
     setIsReviewing(true);
 
     try {
-      const { files: fixedFiles, review } = await reviewAndFixCode(files, originalPrompt || '', projectName || '', dbConfig);
+      const { files: fixedFiles, review } = await reviewAndFixCode(files, originalPrompt || '', projectName || '', dbConfig, targetFilename);
       setPendingReview({ files: fixedFiles, prompt: originalPrompt || '', projectName: projectName || '', reviewResult: review });
     } catch (e) {
       console.error('[Review] failed, applying original:', e);
@@ -1057,7 +1110,7 @@ function App() {
     } finally {
       setIsReviewing(false);
     }
-  }, []);
+  }, [dbConfig]);
 
   const handleInvite = () => {
     const url = getWorkspaceInviteUrl();
@@ -1100,10 +1153,17 @@ function App() {
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
               body: JSON.stringify({ files })
             });
+            
+            fetch(`http://localhost:3001/api/workspace/${workspaceId}/commit`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ action: 'commit', details: `Committed ${Object.keys(files).length} files` })
+            });
           }
         } catch (e) {
           console.error('Failed to save to MongoDB:', e);
         }
+        broadcastNotification(`${identity.name} committed changes to the workspace.`, 'success');
       }
     }
   };
@@ -1483,8 +1543,14 @@ function App() {
                               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                               body: JSON.stringify({ files: mergedFiles })
                             });
+                            fetch(`http://localhost:3001/api/workspace/${wsId}/commit`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                              body: JSON.stringify({ action: 'commit', details: `Merged personal files to team` })
+                            });
                           }
                         } catch (e) {}
+                        broadcastNotification(`${identity.name} pushed personal files to the team workspace.`, 'info');
                       }
                     }}
                   >
@@ -1596,7 +1662,7 @@ function App() {
                       onDiscard={() => setPendingReview(null)}
                     />
                   ) : (
-                    <IntentToApp onAppGenerated={setAndBroadcastFiles} generatedFiles={generatedFiles} dbConfig={dbConfig} projectName={appProjectName} setProjectName={setAppProjectName} />
+                    <IntentToApp onAppGenerated={setAndBroadcastFiles} generatedFiles={generatedFiles} dbConfig={dbConfig} projectName={appProjectName} setProjectName={setAppProjectName} workspaceId={getOrCreateWorkspaceId()} setDbConfig={setDbConfig} />
                   )
                 ) : activeTab === 'terminal' ? (
                   <div>
@@ -1638,8 +1704,25 @@ function App() {
             </div>
           </div>
         </ErrorBoundaryWrapper>
-
       </div>
+
+      {/* Real-time Notifications Toast */}
+      {notifications.length > 0 && (
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {notifications.map((n) => (
+            <div key={n.id} style={{
+              background: n.type === 'success' ? '#10B981' : 'var(--panel-elevated)',
+              color: '#fff', padding: '12px 20px', borderRadius: '8px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontSize: '0.9rem', fontWeight: 500,
+              display: 'flex', alignItems: 'center', gap: '10px',
+              border: n.type === 'success' ? '1px solid #059669' : '1px solid var(--panel-border)',
+              animation: 'slideInRight 0.3s ease-out forwards'
+            }}>
+              {n.type === 'success' ? '✨' : '🔔'} {n.message}
+            </div>
+          ))}
+        </div>
+      )}
     </AutomationProvider>
   );
 }
