@@ -155,24 +155,24 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     vercelFiles.push({ file: `src/${filename}`, data: code });
   });
 
+  const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
   let mainComponent = Object.keys(filesMap)
     .map(f => f.replace(/\.jsx?$/, ''))
-    .find(c => /^[A-Z]/.test(c)) || 'App';
+    .find(c => c.toLowerCase().includes('app') || c.toLowerCase().includes('main')) || Object.keys(filesMap)[0]?.replace(/\.jsx?$/, '') || 'App';
 
   for (const candidate of Object.keys(filesMap)) {
     const candidateName = candidate.replace(/\.jsx?$/, '');
-    if (!/^[A-Z]/.test(candidateName)) continue; // Must be a component
     let isImported = false;
     for (const [filename, code] of Object.entries(filesMap)) {
       if (filename === candidate) continue;
-      if (code.includes(`import ${candidateName}`) || code.includes(`from './${candidateName}'`)) {
+      if (code.includes(`import ${candidateName}`) || code.includes(`from './${candidateName}'`) || code.includes(`import ${capitalize(candidateName)}`)) {
         isImported = true;
         break;
       }
     }
     if (!isImported) {
       mainComponent = candidateName;
-      // Prioritize files that look like main entry points
       if (candidateName.toLowerCase().includes('app') || candidateName.toLowerCase().includes('main') || candidateName.toLowerCase().includes('page')) {
         break;
       }
@@ -181,21 +181,23 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
 
   if (!filesMap['App.jsx']) {
     let appJsxData = `import React from 'react';\nimport { BrowserRouter, Routes, Route } from 'react-router-dom';\n`;
+    
+    // Ignore pure utility files based on name heuristic, but keep components
     const components = Object.keys(filesMap)
       .map(f => f.replace(/\.jsx?$/, ''))
-      .filter(c => /^[A-Z]/.test(c)); // Only include files starting with a Capital letter (React components)
+      .filter(c => !['utils', 'api', 'constants', 'config', 'mockdata'].includes(c.toLowerCase()));
 
     components.forEach(c => {
-      appJsxData += `import ${c} from './${c}';\n`;
+      appJsxData += `import ${capitalize(c)} from './${c}';\n`;
     });
     
     appJsxData += `\nexport default function App() {\n  return (\n    <BrowserRouter>\n      <div style={{fontFamily:'Inter,sans-serif'}}>\n        <Routes>\n`;
     
     components.forEach(c => {
       const path = c === mainComponent ? '/' : `/${c}`;
-      appJsxData += `          <Route path="${path}" element={<${c} />} />\n`;
+      appJsxData += `          <Route path="${path}" element={<${capitalize(c)} />} />\n`;
       if (c === mainComponent) {
-        appJsxData += `          <Route path="/${c}" element={<${c} />} />\n`;
+        appJsxData += `          <Route path="/${c}" element={<${capitalize(c)} />} />\n`;
       }
     });
 
