@@ -334,10 +334,8 @@ cron.schedule('0 9 * * *', async () => {
 
 const PORT = process.env.PORT || 3001;
 
-// If we are not in a serverless environment (like Vercel), start the server
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => console.log(`[Backend] Server running on port ${PORT}`));
-}
+// Start the server for Render or Local Development
+app.listen(PORT, () => console.log(`[Backend] Server running on port ${PORT}`));
 
-// Export for Vercel Serverless Functions
+// Export for testing
 export default app;
