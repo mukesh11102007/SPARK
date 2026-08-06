@@ -155,10 +155,13 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     vercelFiles.push({ file: `src/${filename}`, data: code });
   });
 
-  // Determine the true root component by finding the one that is NOT imported by any other file
-  let mainComponent = Object.keys(filesMap)[0]?.replace(/\.jsx?$/, '') || 'App';
+  let mainComponent = Object.keys(filesMap)
+    .map(f => f.replace(/\.jsx?$/, ''))
+    .find(c => /^[A-Z]/.test(c)) || 'App';
+
   for (const candidate of Object.keys(filesMap)) {
     const candidateName = candidate.replace(/\.jsx?$/, '');
+    if (!/^[A-Z]/.test(candidateName)) continue; // Must be a component
     let isImported = false;
     for (const [filename, code] of Object.entries(filesMap)) {
       if (filename === candidate) continue;
@@ -178,7 +181,10 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
 
   if (!filesMap['App.jsx']) {
     let appJsxData = `import React from 'react';\nimport { BrowserRouter, Routes, Route } from 'react-router-dom';\n`;
-    const components = Object.keys(filesMap).map(f => f.replace(/\.jsx?$/, ''));
+    const components = Object.keys(filesMap)
+      .map(f => f.replace(/\.jsx?$/, ''))
+      .filter(c => /^[A-Z]/.test(c)); // Only include files starting with a Capital letter (React components)
+
     components.forEach(c => {
       appJsxData += `import ${c} from './${c}';\n`;
     });
