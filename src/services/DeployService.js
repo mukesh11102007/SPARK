@@ -62,6 +62,9 @@ const buildStandaloneHtml = (filesMap, projectName) => {
     <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/styled-components@6.1.13/dist/styled-components.min.js"></script>
+    <script src="https://unpkg.com/@emotion/react@11.13.3/dist/emotion-react.umd.min.js"></script>
+    <script src="https://unpkg.com/@emotion/styled@11.13.0/dist/emotion-styled.umd.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
     <style>
       html, body { margin: 0; padding: 0; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; }
@@ -74,6 +77,16 @@ const buildStandaloneHtml = (filesMap, projectName) => {
     <script type="text/babel" data-presets="react">
       (function() {
         try {
+          // Setup styled-components global mapping
+          if (window.styled && window.styled.default) {
+            window.styled = window.styled.default;
+          }
+          if (window.styled) {
+            window.createGlobalStyle = window.styled.createGlobalStyle;
+            window.keyframes = window.styled.keyframes;
+            window.ThemeProvider = window.styled.ThemeProvider;
+          }
+
           ${allCode}
           var container = document.getElementById('root');
           var root = ReactDOM.createRoot(container);
@@ -136,7 +149,74 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     .replace(/--+/g, '-')
     .slice(0, 50);
 
-  const html = buildStandaloneHtml(filesMap, projectName);
+  // Build full Vite project structure instead of standalone HTML
+  const vercelFiles = [];
+  Object.entries(filesMap).forEach(([filename, code]) => {
+    vercelFiles.push({ file: `src/${filename}`, data: code });
+  });
+
+  // Determine the true root component by finding the one that is NOT imported by any other file
+  let mainComponent = Object.keys(filesMap)[0]?.replace(/\.jsx?$/, '') || 'App';
+  for (const candidate of Object.keys(filesMap)) {
+    const candidateName = candidate.replace(/\.jsx?$/, '');
+    let isImported = false;
+    for (const [filename, code] of Object.entries(filesMap)) {
+      if (filename === candidate) continue;
+      if (code.includes(`import ${candidateName}`) || code.includes(`from './${candidateName}'`)) {
+        isImported = true;
+        break;
+      }
+    }
+    if (!isImported) {
+      mainComponent = candidateName;
+      // Prioritize files that look like main entry points
+      if (candidateName.toLowerCase().includes('app') || candidateName.toLowerCase().includes('main') || candidateName.toLowerCase().includes('page')) {
+        break;
+      }
+    }
+  }
+
+  if (!filesMap['App.jsx']) {
+    let appJsxData = `import React from 'react';\nimport { BrowserRouter, Routes, Route } from 'react-router-dom';\n`;
+    const components = Object.keys(filesMap).map(f => f.replace(/\.jsx?$/, ''));
+    components.forEach(c => {
+      appJsxData += `import ${c} from './${c}';\n`;
+    });
+    
+    appJsxData += `\nexport default function App() {\n  return (\n    <BrowserRouter>\n      <div style={{fontFamily:'Inter,sans-serif'}}>\n        <Routes>\n`;
+    
+    components.forEach(c => {
+      const path = c === mainComponent ? '/' : `/${c}`;
+      appJsxData += `          <Route path="${path}" element={<${c} />} />\n`;
+      if (c === mainComponent) {
+        appJsxData += `          <Route path="/${c}" element={<${c} />} />\n`;
+      }
+    });
+
+    appJsxData += `        </Routes>\n      </div>\n    </BrowserRouter>\n  );\n}`;
+    
+    vercelFiles.push({ file: 'src/App.jsx', data: appJsxData });
+  }
+
+  vercelFiles.push({
+    file: 'index.html',
+    data: `<!DOCTYPE html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>${projectName || 'SPARK App'}</title>\n    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>\n    <script src="https://cdn.tailwindcss.com"></script>\n    <script src="https://unpkg.com/styled-components@6.1.13/dist/styled-components.min.js"></script>\n    <script src="https://unpkg.com/@emotion/react@11.13.3/dist/emotion-react.umd.min.js"></script>\n    <script src="https://unpkg.com/@emotion/styled@11.13.0/dist/emotion-styled.umd.min.js"></script>\n    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />\n  </head>\n  <body>\n    <div id="root"></div>\n    <script type="module" src="/src/main.jsx"></script>\n  </body>\n</html>`
+  });
+
+  vercelFiles.push({
+    file: 'package.json',
+    data: `{\n  "name": "${cleanName}",\n  "private": true,\n  "version": "0.0.0",\n  "type": "module",\n  "scripts": { "dev": "vite", "build": "vite build" },\n  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0", "lucide-react": "^0.263.1", "@supabase/supabase-js": "^2.42.0", "styled-components": "^6.1.13", "@emotion/react": "^11.13.3", "@emotion/styled": "^11.13.0", "react-router-dom": "^6.22.3" },\n  "devDependencies": { "@vitejs/plugin-react": "^4.2.1", "vite": "^5.2.0" }\n}`
+  });
+
+  vercelFiles.push({
+    file: 'vite.config.js',
+    data: `import { defineConfig } from 'vite'\nimport react from '@vitejs/plugin-react'\nexport default defineConfig({ plugins: [react()] })`
+  });
+
+  vercelFiles.push({
+    file: 'src/main.jsx',
+    data: `import React from 'react'\nimport ReactDOM from 'react-dom/client'\nimport App from './App.jsx'\nReactDOM.createRoot(document.getElementById('root')).render(<App />)`
+  });
 
   const teamId = await getTeamId(token);
   const teamParam = teamId ? `?teamId=${teamId}` : '';
@@ -149,8 +229,8 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     },
     body: JSON.stringify({
       name: cleanName || 'spark-app',
-      files: [{ file: 'index.html', data: html }],
-      projectSettings: { framework: null, outputDirectory: '.' },
+      files: vercelFiles,
+      projectSettings: { framework: 'vite', outputDirectory: 'dist' },
       target: 'production',
     }),
   });

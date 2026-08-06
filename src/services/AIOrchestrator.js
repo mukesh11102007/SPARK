@@ -1,32 +1,26 @@
-import { GoogleGenAI } from '@google/genai';
-
 const WEBHOOK_URL = 'https://api.agents.snsihub.ai/webhook/Db';
-const keys = [
-  import.meta.env.VITE_GEMINI_API_KEY || '',
-  import.meta.env.VITE_GEMINI_API_KEY_2 || '',
-  import.meta.env.VITE_GEMINI_API_KEY_3 || ''
-].filter(Boolean);
+const FALLBACK_WEBHOOK_URL = import.meta.env.VITE_FALLBACK_WEBHOOK_URL || 'https://api.agents.snsihub.ai/webhook/fallback';
 
-let currentKeyIndex = 0;
-const getAiClient = () => {
-  if (keys.length === 0) throw new Error("No Gemini API keys configured");
-  return new GoogleGenAI({ apiKey: keys[currentKeyIndex] });
-};
-
-const executeWithRoundRobin = async (operation) => {
-  let attempts = 0;
-  const errors = [];
-  while (attempts < keys.length) {
+const executeWithFallback = async (prompt, systemInstruction = '') => {
+  try {
+    const response = await fetch(FALLBACK_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, systemInstruction })
+    });
+    if (!response.ok) throw new Error(`Fallback webhook failed: ${response.status}`);
+    const text = await response.text();
     try {
-      return await operation(getAiClient());
-    } catch (e) {
-      console.warn(`[AIOrchestrator] Key ${currentKeyIndex} failed. Trying next...`, e);
-      errors.push(`Key ${currentKeyIndex}: ${e.message}`);
-      currentKeyIndex = (currentKeyIndex + 1) % keys.length;
-      attempts++;
+      const json = JSON.parse(text);
+      if (json._responseData?.content?.parts?.[0]?.text) return json._responseData.content.parts[0].text;
+      return json.output || json.text || json.reply || json.response || text;
+    } catch {
+      return text;
     }
+  } catch (err) {
+    console.error("[AIOrchestrator] Fatal: Fallback webhook also failed.", err);
+    throw new Error("Both primary and fallback AI services are currently unavailable.");
   }
-  throw new Error("All Gemini API keys failed or rate limited. Details: " + errors.join(' | '));
 };
 
 // Helper to recursively find JS/JSX code in nested JSON objects
@@ -64,6 +58,25 @@ const findCodeInObject = (obj) => {
 const extractCode = (raw, projectName) => {
   let text = raw.trim();
 
+  // 1. Try parsing multiple files using "// FILE: filename.jsx" delimiter
+  const fileRegex = /\/\/\s*FILE:\s*([a-zA-Z0-9_.-]+)\n([\s\S]*?)(?=\/\/\s*FILE:|$)/gi;
+  let hasFiles = false;
+  const files = {};
+  
+  let fileMatch;
+  while ((fileMatch = fileRegex.exec(text)) !== null) {
+    hasFiles = true;
+    let fileName = fileMatch[1].trim();
+    if (!fileName.endsWith('.jsx') && !fileName.endsWith('.js')) fileName += '.jsx';
+    const fileCode = fileMatch[2].replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+    if (fileCode) files[fileName] = fileCode;
+  }
+  
+  if (hasFiles && Object.keys(files).length > 0) {
+    return files;
+  }
+
+  // 2. Try parsing JSON format
   if (text.startsWith('{') || text.startsWith('[')) {
     try {
       const parsed = JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim());
@@ -71,8 +84,7 @@ const extractCode = (raw, projectName) => {
       if (extracted) {
         text = extracted;
       } else {
-        // Return null so caller falls back to Gemini API
-        return null;
+        return null; // Return null so caller falls back to Gemini API
       }
     } catch {}
   }
@@ -93,6 +105,23 @@ const extractCode = (raw, projectName) => {
   }
 
   return null;
+};
+
+// ── Styling Prompt Helper ───────────────────────────────────────────────────
+const getStylingPrompt = (preference) => {
+  switch (preference) {
+    case 'tailwind':
+      return `5. **STYLING**: You MUST use Tailwind CSS utility classes (e.g., className="bg-blue-500 hover:bg-blue-600"). Do not use inline styles or styled-components. Assume a standard Tailwind installation is present.`;
+    case 'inline':
+      return `5. **STYLING**: Use ONLY inline styles (style={{...}}). Do not use Tailwind, external CSS, or styled-components.`;
+    case 'css-modules':
+      return `5. **STYLING**: You MUST use CSS Modules. Assume you can import styles via \`import styles from './styles.module.css';\` and apply them via \`className={styles.container}\`.`;
+    case 'emotion':
+      return `5. **STYLING**: You MUST use Emotion (\`@emotion/react\` or \`@emotion/styled\`). Import it like \`import styled from '@emotion/styled';\`. DO NOT use inline styles.`;
+    case 'styled-components':
+    default:
+      return `5. **STYLING**: DO NOT use inline styles unless absolutely necessary. You MUST use \`styled-components\` for styling to support pseudo-classes like :hover and media queries. Import it like \`import styled from 'styled-components';\`.`;
+  }
 };
 
 // ── Supabase Prompt Helper ───────────────────────────────────────────────────
@@ -118,65 +147,59 @@ The user has provisioned a real Supabase database. You MUST write this component
 `;
 };
 
-// ── Gemini fallback ─────────────────────────────────────────────────────────
-const generateWithGemini = async (prompt, projectName, dbConfig) => {
-  console.log('[AIOrchestrator] Falling back to Gemini API...');
-  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `You are an expert React developer. Generate a single, complete, self-contained React component for the following request.
+const generateWithGemini = async (prompt, projectName, dbConfig, stylingPref = 'styled-components') => {
+  console.log('[AIOrchestrator] Falling back to Webhook Fallback...');
+  const raw = await executeWithFallback(prompt, `You are an expert React developer. Generate a complete React application for the following request.
 
 CRITICAL RULES — MUST FOLLOW:
-1. Return ONLY raw JSX/React code. No markdown, no backticks, no explanation.
-2. The ONLY allowed import is: import React, { useState, useEffect, useRef } from 'react';
-3. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
-4. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes like fa-home, fa-user, fa-cog).
-5. Use ONLY inline styles (style={{}}). No external CSS, no Tailwind classes.
-6. The component MUST have: export default function ComponentName() { ... }
-7. No TypeScript. No JSX fragments as the top-level export. Always return a single root <div>.
-8. Code must be completely free of syntax errors, undefined variables, and runtime errors.
-9. The component must be fully functional with sample/demo data included inline.
-10. AESTHETICS ARE VERY IMPORTANT. The UI must be extremely premium, modern, and beautiful. Use smooth gradients, glassmorphism, dark/light sleek themes, subtle micro-animations, and modern typography.
+1. If generating a single file, return ONLY raw JSX/React code. If generating multiple files (like a multi-page app), before EACH file's code, you MUST output exactly: // FILE: FileName.jsx
+2. Imports: import React, { useState, useEffect, useRef } from 'react'; ${stylingPref === 'styled-components' ? "and import styled from 'styled-components';" : ""}
+3. ROUTING: For multi-page apps, you MUST create an App.jsx that uses react-router-dom for routing. 'react-router-dom' is globally available, so import it like: import { BrowserRouter, MemoryRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+4. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
+5. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes like fa-home, fa-user, fa-cog).
+${getStylingPrompt(stylingPref)}
+7. Each component MUST have: export default function ComponentName() { ... }
+8. No TypeScript. No JSX fragments as the top-level export.
+9. Code must be completely free of syntax errors, undefined variables, and runtime errors.
+10. The component must be fully functional with sample/demo data included inline.
+11. AESTHETICS ARE VERY IMPORTANT. The UI must be extremely premium, modern, and beautiful. Use smooth gradients, glassmorphism, dark/light sleek themes, subtle micro-animations, and modern typography.
 
 Project name: ${projectName}
 User request: ${prompt}
-${getDbPrompt(dbConfig)}`,
-  }));
-  const raw = resp.text || '';
+${getDbPrompt(dbConfig)}`);
+  const files = extractCode(raw, projectName);
+  if (files) return files;
+
   const clean = raw.replace(/\`\`\`jsx?/gi, '').replace(/\`\`\`/g, '').trim();
   const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
-  let fileName;
-  if (match && match[1]) {
-    fileName = `${match[1]}.jsx`;
-  } else {
-    let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
-    if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
-    fileName = `${safeName}Component.jsx`;
-  }
+  let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
+  if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
+  const fileName = (match && match[1]) ? `${match[1]}.jsx` : `${safeName}Component.jsx`;
   return { [fileName]: clean };
 };
 
 // ── Main export ─────────────────────────────────────────────────────────────
-export const generateAppFromVoice = async (prompt, projectName = 'MyProject', dbConfig = null) => {
-  console.log('[AIOrchestrator] Generating for:', { prompt, projectName });
+export const generateAppFromVoice = async (prompt, projectName = 'MyProject', dbConfig = null, stylingPref = 'styled-components') => {
+  console.log('[AIOrchestrator] Generating for:', { prompt, projectName, stylingPref });
 
   // 2-minute timeout on webhook
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 120_000);
 
   try {
-    const premiumPrompt = "\n\nCRITICAL UI/UX REQUIREMENT: You must generate a design that is extremely premium, modern, and visually stunning. Use beautiful gradients, glassmorphism, micro-animations, rich aesthetic colors, and modern typography. Avoid generic, plain layouts.";
+    const premiumPrompt = `\n\nCRITICAL UI/UX REQUIREMENT: You must generate a design that is extremely premium, modern, and visually stunning. Avoid generic layouts.\nCRITICAL ROUTING & MULTI-PAGE RULES: If the user requests multiple pages or an interconnected app, you MUST generate multiple files. Before EACH file's code, output exactly: // FILE: FileName.jsx\nUse 'react-router-dom' for routing (e.g., import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom').\n${getStylingPrompt(stylingPref)}`;
     const fullPrompt = prompt + premiumPrompt + '\n' + getDbPrompt(dbConfig);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: fullPrompt, projectName, dbConfig }),
+      body: JSON.stringify({ prompt: fullPrompt, projectName, dbConfig, stylingPreference: stylingPref }),
       signal: controller.signal,
     });
     clearTimeout(timeout);
 
     if (!response.ok) {
-      console.warn('[AIOrchestrator] Webhook failed, falling back to Gemini...');
-      return await generateWithGemini(prompt, projectName, dbConfig);
+      console.warn('[AIOrchestrator] Webhook failed, falling back...');
+      return await generateWithGemini(prompt, projectName, dbConfig, stylingPref);
     }
 
     const rawText = await response.text();
@@ -185,22 +208,22 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
     const files = extractCode(rawText, projectName);
     if (files) return files;
 
-    // Webhook returned empty/metadata — fall back to Gemini
-    console.warn('[AIOrchestrator] Webhook returned no code. Falling back to Gemini...');
-    return await generateWithGemini(prompt, projectName, dbConfig);
+    // Webhook returned empty/metadata — fall back
+    console.warn('[AIOrchestrator] Webhook returned no code. Falling back...');
+    return await generateWithGemini(prompt, projectName, dbConfig, stylingPref);
 
   } catch (e) {
     clearTimeout(timeout);
     if (e.name === 'AbortError') {
-      console.warn('[AIOrchestrator] Webhook timed out. Falling back to Gemini...');
-      return await generateWithGemini(prompt, projectName, dbConfig);
+      console.warn('[AIOrchestrator] Webhook timed out. Falling back...');
+      return await generateWithGemini(prompt, projectName, dbConfig, stylingPref);
     }
     throw e;
   }
 };
 
 // ── Refine existing code via Gemini ──────────────────────────────────────────
-export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null, workspaceFiles = null) => {
+export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null, workspaceFiles = null, stylingPref = 'styled-components') => {
   console.log('[AIOrchestrator] Refining code with Gemini...', { filename });
   
   let workspaceContext = '';
@@ -213,20 +236,17 @@ export const refineAppCode = async (existingCode, problemStatement, projectName,
     });
   }
 
-  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `You are an expert React developer.
+  const raw = await executeWithFallback(problemStatement, `You are an expert React developer.
 The user wants to improve an existing React component.
 
 CRITICAL RULES — MUST FOLLOW:
 1. Return ONLY raw JSX/React code. No markdown, no backticks, no explanation.
-2. The ONLY allowed import is: import React, { useState, useEffect, useRef } from 'react';
+2. Imports: import React, { useState, useEffect, useRef } from 'react'; ${stylingPref === 'styled-components' ? "and import styled from 'styled-components';" : ""}
 3. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
 4. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes).
-5. Use ONLY inline styles (style={{}}). No external CSS files, no Tailwind classes.
-6. The component MUST have: export default function ComponentName() { ... }
-7. Fix ALL existing syntax errors or undefined variables in the code.
-8. The component must be fully functional with sample data if needed.
+${getStylingPrompt(stylingPref)}
+7. **COMPATIBILITY**: You are running in a browser environment. Do not use Node.js modules like 'fs' or 'path'.
+8. **COMPLETENESS**: Return the ENTIRE file content. No omissions, no "..." placeholders.
 9. PREMIUM DESIGN: Retain and enhance any premium design aesthetics (gradients, glassmorphism, animations). Never downgrade the UI to look plain.
 
 Project name: ${projectName}
@@ -240,10 +260,7 @@ ${workspaceContext}
 
 ${getDbPrompt(dbConfig)}
 
-Remember: ONLY return the raw code.`
-  }));
-  
-  const raw = resp.text || '';
+Remember: ONLY return the raw code.`);
   const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
   let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
   if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
@@ -348,27 +365,54 @@ Fix the code to resolve the error. Return ONLY the complete corrected raw JSX/Re
   }
 };
 
-export const chatWithProject = async (files, userMessage) => {
-  return executeWithRoundRobin(async (ai) => {
-    const fileContext = Object.entries(files || {})
-      .map(([name, code]) => `File: ${name}\n\`\`\`javascript\n${code}\n\`\`\``)
-      .join('\n\n');
+export const chatWithProject = async (files, userMessage, sessionId = 'default-session') => {
+  const fileContext = Object.entries(files || {})
+    .map(([name, code]) => `File: ${name}\n\`\`\`javascript\n${code}\n\`\`\``)
+    .join('\n\n');
 
-    const prompt = `You are a helpful AI developer assistant embedded in a code editor.
-The user is asking you a question about their current workspace.
+  const CHAT_WEBHOOK_URL = import.meta.env.VITE_CHATBOT_WEBHOOK_URL || 'https://api.agents.snsihub.ai/webhook/chatbot';
 
-Here are the current files in the workspace:
-${fileContext}
-
-User Message:
-${userMessage}
-
-Please answer the user's question concisely. If suggesting code, use markdown code blocks.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+  try {
+    // 1. Try the n8n webhook to save tokens
+    const response = await fetch(CHAT_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId, userMessage, fileContext })
     });
-    return response.text;
-  });
+
+    if (response.ok) {
+      const text = await response.text();
+      // Try to parse the webhook JSON and extract the actual message text
+      try {
+        const json = JSON.parse(text);
+        
+        // Handle n8n raw node output structures
+        if (json._responseData?.content?.parts?.[0]?.text) {
+          return json._responseData.content.parts[0].text;
+        }
+        
+        // Handle standard webhook payload keys
+        if (json.output) return json.output;
+        if (json.text) return json.text;
+        if (json.reply) return json.reply;
+        if (json.response) return json.response;
+        if (json.message) return json.message;
+        
+        // If it's a nested array from n8n (e.g. [{output: "..."}])
+        if (Array.isArray(json) && json[0]) {
+           return json[0].output || json[0].text || json[0].message || text;
+        }
+
+        return text; // Fallback to raw string if no known key is found
+      } catch {
+        return text;
+      }
+    }
+    throw new Error(`Webhook failed with status: ${response.status}`);
+  } catch (err) {
+    console.warn('[AIOrchestrator] Chat webhook failed, falling back to Gemini API...', err);
+    
+    // 2. Fallback to Fallback Webhook
+    return await executeWithFallback(prompt, `You are a helpful AI developer assistant embedded in a code editor.\nThe user is asking you a question about their current workspace.\n\nHere are the current files in the workspace:\n${fileContext}`);
+  }
 };

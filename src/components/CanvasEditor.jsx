@@ -6,6 +6,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { subscribeToCanvasUpdates, broadcastCanvasUpdate } from '../services/SupabaseService';
+import { MonacoEditorPanel } from './MonacoEditorPanel';
 
 const initialEdges = [];
 
@@ -100,17 +101,32 @@ const CustomNode = ({ data, id, selected }) => {
         </div>
         <div style={{ display: 'flex', gap: 3, flexShrink: 0 }}>
           {data.code && (
-            <button
-              onClick={handleCopy}
-              title="Copy code"
-              style={{
-                background: 'none', border: 'none', cursor: 'pointer',
-                color: copied ? '#10b981' : '#9ca3af', fontSize: 13,
-                padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
-              }}
-            >
-              {copied ? '✓' : '⧉'}
-            </button>
+            <>
+              <button
+                onClick={() => data.onEdit && data.onEdit(id, data.label, data.code)}
+                title="Edit code"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: '#9ca3af', fontSize: 13, fontWeight: 'bold',
+                  padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'}
+                onMouseLeave={e => e.currentTarget.style.color = '#9ca3af'}
+              >
+                &lt;/&gt;
+              </button>
+              <button
+                onClick={handleCopy}
+                title="Copy code"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: copied ? '#10b981' : '#9ca3af', fontSize: 13,
+                  padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
+                }}
+              >
+                {copied ? '✓' : '⧉'}
+              </button>
+            </>
           )}
           <button
             onClick={() => data.onDelete && data.onDelete(id)}
@@ -173,9 +189,10 @@ const CustomNode = ({ data, id, selected }) => {
 
 const nodeTypes = { customNode: CustomNode };
 
-export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', onFileDelete, isActive = true, readOnly = false }) => {
+export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', onFileDelete, onFileUpdate, isActive = true, readOnly = false }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [editingFile, setEditingFile] = useState(null);
 
   const handleDeleteNode = useCallback((nodeId) => {
     if (readOnly) return;
@@ -196,11 +213,28 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
     ));
   }, [setNodes, readOnly]);
 
+  const handleEditCode = useCallback((nodeId, label, code) => {
+    if (readOnly) return;
+    setEditingFile({ nodeId, label, code });
+  }, [readOnly]);
+
+  const handleSaveCode = useCallback((newCode) => {
+    if (!editingFile || readOnly) return;
+    setNodes(nds => nds.map(n =>
+      n.id === editingFile.nodeId ? { ...n, data: { ...n.data, code: newCode } } : n
+    ));
+    if (onFileUpdate) {
+      onFileUpdate(editingFile.label, newCode);
+    }
+    setEditingFile(null);
+  }, [editingFile, readOnly, setNodes, onFileUpdate]);
+
   const makeNodeData = useCallback((base) => ({
     ...base,
     onDelete: handleDeleteNode,
     onRename: handleRenameNode,
-  }), [handleDeleteNode, handleRenameNode]);
+    onEdit: handleEditCode
+  }), [handleDeleteNode, handleRenameNode, handleEditCode]);
 
   // Supabase realtime canvas sync
   useEffect(() => {
@@ -284,26 +318,99 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
 
   const onConnect = useCallback((params) => {
     setEdges(eds => {
+      // Directed Acyclic Graph (DAG) cycle detection
+      const hasCycle = (source, target) => {
+        if (source === target) return true;
+        const graph = {};
+        eds.forEach(e => {
+          if (!graph[e.source]) graph[e.source] = [];
+          graph[e.source].push(e.target);
+        });
+        
+        const visited = new Set();
+        const dfs = (node) => {
+          if (node === source) return true;
+          if (visited.has(node)) return false;
+          visited.add(node);
+          if (!graph[node]) return false;
+          for (const neighbor of graph[node]) {
+            if (dfs(neighbor)) return true;
+          }
+          return false;
+        };
+        return dfs(target);
+      };
+
+      if (hasCycle(params.source, params.target)) {
+        alert("Cyclic connection prevented! You cannot create an infinite loop.");
+        return eds;
+      }
+
+      // Find source and target nodes to auto-inject import statements
+      const sourceNode = nodes.find(n => n.id === params.source);
+      const targetNode = nodes.find(n => n.id === params.target);
+
+      if (sourceNode && targetNode && !readOnly) {
+        const targetName = targetNode.data.label.replace(/\.jsx?$/, '');
+        const importStmt = `import ${targetName} from './${targetName}';`;
+        
+        let newSourceCode = sourceNode.data.code || '';
+        if (!newSourceCode.includes(importStmt)) {
+          // Inject import at the top
+          const importIndex = newSourceCode.indexOf('import ');
+          if (importIndex !== -1) {
+            const nextLineIndex = newSourceCode.indexOf('\n', importIndex);
+            newSourceCode = newSourceCode.slice(0, nextLineIndex + 1) + importStmt + '\n' + newSourceCode.slice(nextLineIndex + 1);
+          } else {
+            newSourceCode = importStmt + '\n' + newSourceCode;
+          }
+
+          // Inject the component JSX tag into the return block
+          const returnIndex = newSourceCode.indexOf('return ');
+          if (returnIndex !== -1) {
+            // Find the first `<` after return
+            const firstTagIndex = newSourceCode.indexOf('<', returnIndex);
+            if (firstTagIndex !== -1) {
+              const endOfFirstTag = newSourceCode.indexOf('>', firstTagIndex);
+              if (endOfFirstTag !== -1) {
+                const jsxTag = `\n      <${targetName} />`;
+                newSourceCode = newSourceCode.slice(0, endOfFirstTag + 1) + jsxTag + newSourceCode.slice(endOfFirstTag + 1);
+              }
+            }
+          }
+
+          // Update source node code
+          setNodes(nds => nds.map(n => 
+            n.id === params.source ? { ...n, data: { ...n.data, code: newSourceCode } } : n
+          ));
+          if (onFileUpdate) onFileUpdate(sourceNode.data.label, newSourceCode);
+        }
+      }
+
       const newEdges = addEdge({
         ...params,
         type: 'smoothstep',
         style: { stroke: '#d1d5db', strokeWidth: 2 },
       }, eds);
+      
       broadcastCanvasUpdate(nodes, newEdges);
       return newEdges;
     });
-  }, [setEdges, nodes]);
+  }, [setEdges, nodes, setNodes, onFileUpdate, readOnly]);
 
   const onNodesDelete = useCallback((deleted) => {
+    // Call onFileDelete outside of the state updater to avoid React strict-mode double execution
+    deleted.forEach(d => {
+      if (onFileDelete) onFileDelete(d.data.label);
+    });
+
     setNodes(nds => {
-      deleted.forEach(d => {
-        if (onFileDelete) onFileDelete(d.data.label);
-      });
       const remainingNodes = nds.filter(n => !deleted.find(d => d.id === n.id));
+      // Broadcast the remaining nodes, but avoid broadcasting stale edges by letting the server handle edge cascading
       broadcastCanvasUpdate(remainingNodes, edges);
       return remainingNodes;
     });
-  }, [nodes, edges, setNodes, onFileDelete]);
+  }, [edges, setNodes, onFileDelete]);
 
   const onEdgesDelete = useCallback((deleted) => {
     recordDeletedEdges(deleted);
@@ -317,7 +424,7 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
   const isDark = theme === 'antigravity' || theme === 'dark';
 
   return (
-    <div style={{ width: '100%', height: '100%', flex: 1 }}>
+    <div style={{ width: '100%', height: '100%', flex: 1, position: 'relative' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -366,6 +473,15 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
           maskColor={isDark ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.6)'}
         />
       </ReactFlow>
+      
+      {editingFile && (
+        <MonacoEditorPanel 
+          code={editingFile.code}
+          fileName={editingFile.label}
+          onSave={handleSaveCode}
+          onClose={() => setEditingFile(null)}
+        />
+      )}
     </div>
   );
 };

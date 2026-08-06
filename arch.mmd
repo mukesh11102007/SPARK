@@ -1,0 +1,51 @@
+flowchart TB
+    classDef frontend fill:#1e1e2e,stroke:#cba6f7,stroke-width:2px,color:#fff;
+    classDef database fill:#181825,stroke:#a6e3a1,stroke-width:2px,color:#fff;
+    classDef n8n fill:#181825,stroke:#f38ba8,stroke-width:2px,color:#fff;
+    classDef ai fill:#181825,stroke:#89b4fa,stroke-width:2px,color:#fff;
+    classDef external fill:#181825,stroke:#fab387,stroke-width:2px,color:#fff;
+
+    subgraph User Device
+        Browser["Web Browser (SPARK Studio UI)"]:::frontend
+    end
+
+    subgraph React Frontend ["Frontend (Vite + React)"]
+        direction TB
+        AppRoot["App.jsx"]:::frontend
+        Dashboard["Dashboard.jsx"]:::frontend
+        Canvas["CanvasEditor.jsx"]:::frontend
+        Chatbot["ProjectChatBot.jsx"]:::frontend
+        
+        AppRoot --> Dashboard
+        AppRoot --> Canvas
+        AppRoot --> Chatbot
+    end
+
+    subgraph Backend Logic
+        AIOrchestrator["AIOrchestrator.js"]:::frontend
+    end
+
+    subgraph Data Layer
+        SupabaseDB[("Supabase PostgreSQL")]:::database
+    end
+
+    subgraph Automations ["n8n Production Server"]
+        N8nGen["/webhook/Db"]:::n8n
+        N8nCommits["/webhook/commits"]:::n8n
+        N8nInstant["/webhook/instant_msg"]:::n8n
+    end
+
+    subgraph External APIs
+        GeminiFlash["Gemini 2.5 Flash"]:::ai
+    end
+
+    Browser ====> AppRoot
+    Canvas <==> SupabaseDB
+    Canvas --> AIOrchestrator
+    Chatbot --> AIOrchestrator
+    
+    AIOrchestrator --> N8nGen
+    AIOrchestrator -.-> GeminiFlash
+    
+    LocalGit["Local Git Hooks"]:::external --> N8nCommits
+    Chatbot --> N8nInstant

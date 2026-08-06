@@ -5,14 +5,45 @@ import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import cron from 'node-cron';
+import helmet from 'helmet';
+import mongoSanitize from 'express-mongo-sanitize';
+import rateLimit from 'express-rate-limit';
+
+// Strict Environment Variable Verification
+if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {
+  console.error('[FATAL] Missing required environment variables: MONGO_URI and/or JWT_SECRET.');
+  process.exit(1);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 const app = express();
+
+// Enterprise Security Middlewares
+app.use(helmet()); // Secure HTTP headers
+app.use(mongoSanitize()); // Prevent NoSQL Injection
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 
+// Global API Rate Limiting (200 requests per 15 minutes)
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: 'Too many requests from this IP, please try again later.' }
+});
+app.use('/api', globalLimiter);
+
+// Strict Auth Rate Limiting (10 requests per 15 minutes to prevent brute-force)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many authentication attempts, please try again later.' }
+});
+app.use('/api/auth', authLimiter);
+
 // Database connection
-const MONGO_URI = 'mongodb+srv://Mukesh:mukesh2198@m.i8bh3sm.mongodb.net/spark_ide?retryWrites=true&w=majority';
-mongoose.connect(MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log('[Backend] Connected to MongoDB'))
   .catch(err => console.error('[Backend] MongoDB connection error:', err));
 
@@ -46,7 +77,6 @@ const activityLogSchema = new mongoose.Schema({
 });
 const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-spark-key-123';
 
 // Auth Middleware
 const auth = (req, res, next) => {
@@ -74,7 +104,7 @@ app.post('/api/auth/register', async (req, res) => {
     const user = new User({ email, password: hashedPassword, name, developerType });
     await user.save();
     
-    const token = jwt.sign({ id: user._id }, JWT_SECRET);
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, user: { id: user._id, name, email, developerType, avatarUrl: user.avatarUrl } });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -90,7 +120,7 @@ app.post('/api/auth/login', async (req, res) => {
     const validPass = await bcrypt.compare(password, user.password);
     if (!validPass) return res.status(400).json({ error: 'Invalid password' });
     
-    const token = jwt.sign({ id: user._id }, JWT_SECRET);
+    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1d' });
     res.json({ token, user: { id: user._id, name: user.name, email: user.email, developerType: user.developerType, avatarUrl: user.avatarUrl } });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -140,8 +170,10 @@ app.post('/api/workspace/:id', auth, async (req, res) => {
     if (!workspace) {
       workspace = new Workspace({ workspaceId: req.params.id, ownerId: req.user.id, members: [{ userId: req.user.id, role: 'owner' }] });
     }
-    // Update files
-    workspace.files = { ...workspace.files, ...files };
+    // Overwrite files completely to allow deletions
+    if (files !== undefined) {
+      workspace.files = files;
+    }
     await workspace.save();
     res.json({ success: true });
   } catch (err) {
@@ -292,4 +324,11 @@ cron.schedule('0 9 * * *', async () => {
 });
 
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`[Backend] Server running on port ${PORT}`));
+
+// If we are not in a serverless environment (like Vercel), start the server
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => console.log(`[Backend] Server running on port ${PORT}`));
+}
+
+// Export for Vercel Serverless Functions
+export default app;

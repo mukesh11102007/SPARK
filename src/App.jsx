@@ -101,7 +101,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
   );
 };
 
-const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, setProjectName, workspaceId, setDbConfig }) => {
+const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, setProjectName, workspaceId, setDbConfig, stylingPreference }) => {
   const [isListening, setIsListening] = useState(false);
   const [textInput, setTextInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -155,7 +155,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, selectedFile, activeDbConfig, generatedFiles);
         code = { ...generatedFiles, ...enhancedCode };
       } else {
-        const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig);
+        const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig, stylingPreference);
         code = { ...(generatedFiles || {}), ...newCode };
       }
 
@@ -306,46 +306,16 @@ const ActionsPanel = ({ onSimulateCrash }) => {
   );
 };
 
-const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId }) => {
+const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId, stylingPreference, setStylingPreference, members }) => {
   const [workspaceMembers, setWorkspaceMembers] = React.useState([]);
-  const [loadingMembers, setLoadingMembers] = React.useState(false);
 
   React.useEffect(() => {
-    const fetchMembers = async () => {
-      const token = localStorage.getItem('spark_token');
-      if (!token) return;
-      setLoadingMembers(true);
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/members`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) setWorkspaceMembers(await res.json());
-      } catch (e) {
-        console.error('Failed to fetch members', e);
-      } finally {
-        setLoadingMembers(false);
-      }
-    };
-    fetchMembers();
-  }, [workspaceId]);
-
-  const handleRoleChange = async (targetUserId, newRole) => {
-    const token = localStorage.getItem('spark_token');
-    if (!token) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}/member`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ targetUserId, role: newRole })
-      });
-      if (res.ok) {
-        setWorkspaceMembers(prev => prev.map(m => m.id === targetUserId ? { ...m, role: newRole } : m));
-      } else {
-        alert('Failed to update role. You might not be the owner.');
-      }
-    } catch (e) {
-      console.error(e);
+    if (members) {
+      setWorkspaceMembers(members.map(m => ({ ...m, role: m.email === identity?.email ? 'owner' : 'editor' })));
     }
+  }, [members, identity]);
+  const handleRoleChange = async (targetUserId, newRole) => {
+    alert('SPARK Studio is now serverless! Role management is handled automatically via Supabase Presence (anyone with the workspace URL is an Editor).');
   };
 
   const isOwner = workspaceMembers.find(m => m.email === identity?.email)?.role === 'owner';
@@ -433,6 +403,20 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
           <option value="light">Light Mode</option>
         </select>
       </div>
+      
+      <div className="sidebar-section">
+        <h3>STYLING FRAMEWORK</h3>
+        <select className="ide-input" value={stylingPreference} onChange={(e) => {
+          setStylingPreference(e.target.value);
+          localStorage.setItem('spark_styling_pref', e.target.value);
+        }}>
+          <option value="styled-components">Styled-Components</option>
+          <option value="tailwind">Tailwind CSS</option>
+          <option value="inline">Inline Styles (Vanilla)</option>
+          <option value="css-modules">CSS Modules</option>
+          <option value="emotion">Emotion</option>
+        </select>
+      </div>
     </div>
   );
 };
@@ -469,7 +453,9 @@ const buildProjectFiles = (generatedFiles) => {
       if (!mainComponent) mainComponent = filename.replace(/\.jsx?$/, '');
     });
   }
-  if (mainComponent) {
+  
+  // Only inject a wrapper App.jsx if the user hasn't explicitly generated one
+  if (mainComponent && !files['src/App.jsx']) {
     files['src/App.jsx'] = `import React from 'react';\nimport ${mainComponent} from './${mainComponent}';\nexport default function App() { return (<div style={{padding:'1.5rem',fontFamily:'Inter,sans-serif'}}><${mainComponent} /></div>); }`;
   }
   return files;
@@ -929,6 +915,7 @@ function App() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeSourceFile, setActiveSourceFile] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('spark_theme') || 'antigravity');
+  const [stylingPreference, setStylingPreference] = useState(() => localStorage.getItem('spark_styling_pref') || 'styled-components');
   const [wcCrashLog, setWcCrashLog] = useState(null);
   const [terminalLogs, setTerminalLogs] = useState([]);
   const [workspaceType, setWorkspaceType] = useState(() => localStorage.getItem('spark_workspace_type') || 'team'); // 'personal' | 'team'
@@ -1350,6 +1337,9 @@ function App() {
           setTheme={setTheme} 
           identity={identity}
           workspaceId={getOrCreateWorkspaceId()}
+          stylingPreference={stylingPreference}
+          setStylingPreference={setStylingPreference}
+          members={members}
           onLogout={() => {
             localStorage.removeItem('spark_user');
             localStorage.removeItem('spark_token');
@@ -1740,7 +1730,7 @@ function App() {
                       onDiscard={() => setPendingReview(null)}
                     />
                   ) : (
-                    <IntentToApp onAppGenerated={setAndBroadcastFiles} generatedFiles={generatedFiles} dbConfig={dbConfig} projectName={appProjectName} setProjectName={setAppProjectName} workspaceId={getOrCreateWorkspaceId()} setDbConfig={setDbConfig} />
+                    <IntentToApp onAppGenerated={setAndBroadcastFiles} generatedFiles={generatedFiles} dbConfig={dbConfig} projectName={appProjectName} setProjectName={setAppProjectName} workspaceId={getOrCreateWorkspaceId()} setDbConfig={setDbConfig} stylingPreference={stylingPreference} />
                   )
                 ) : activeTab === 'terminal' ? (
                   <div>
@@ -1822,7 +1812,7 @@ function App() {
             animation: 'slideUp 0.2s ease-out',
             backdropFilter: 'blur(20px)'
           }}>
-            <ProjectChatBot files={generatedFiles} />
+            <ProjectChatBot files={generatedFiles} mode={currentView === 'workspace' ? 'workspace' : 'dashboard'} />
           </div>
         )}
         <button

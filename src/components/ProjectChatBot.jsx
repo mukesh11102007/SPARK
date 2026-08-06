@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { chatWithProject } from '../services/AIOrchestrator';
 
-export const ProjectChatBot = ({ files }) => {
+export const ProjectChatBot = ({ files, mode = 'workspace' }) => {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'Hi! I am your Project AI Assistant. Ask me anything about your workspace code!' }
+    { role: 'assistant', content: 'Hi! I am your AI Assistant. Ask me anything about your workspace or SPARK Studio!' }
   ]);
   const [input, setInput] = useState('');
   const [selectedFile, setSelectedFile] = useState('All Files');
@@ -30,11 +30,20 @@ export const ProjectChatBot = ({ files }) => {
     setIsLoading(true);
 
     try {
-      const promptModifier = selectedFile !== 'All Files' 
-        ? `[CRITICAL: The user is asking specifically about the file "${selectedFile}". Focus your analysis and answers strictly on this file unless they ask otherwise.]\n\n${userMessage}`
-        : userMessage;
+      let promptModifier = userMessage;
+      
+      if (mode === 'dashboard') {
+        promptModifier = `[SYSTEM CONTEXT OVERRIDE: The user is in the global SPARK Dashboard. Focus your answers entirely on explaining SPARK Studio features, how the platform works, what buttons do, and general navigation guidance. Ignore any code files.]\n\n${userMessage}`;
+      } else if (selectedFile !== 'All Files') {
+        promptModifier = `[CRITICAL: The user is asking specifically about the file "${selectedFile}". Focus your analysis and answers strictly on this file unless they ask otherwise.]\n\n${userMessage}`;
+      }
 
-      const response = await chatWithProject(files, promptModifier);
+      // generate a static session id per component mount if it doesn't exist
+      if (!messagesEndRef.current.sessionId) {
+        messagesEndRef.current.sessionId = Math.random().toString(36).substring(7);
+      }
+
+      const response = await chatWithProject(files, promptModifier, messagesEndRef.current.sessionId, mode);
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);
@@ -54,18 +63,20 @@ export const ProjectChatBot = ({ files }) => {
         fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-main)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>🤖</span> Project Assistant
+          <span style={{ fontSize: '18px' }}>🤖</span> {mode === 'dashboard' ? 'SPARK Assistant' : 'Project Assistant'}
         </div>
-        <select 
-          value={selectedFile}
-          onChange={(e) => setSelectedFile(e.target.value)}
-          style={{
-            background: 'var(--app-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)',
-            padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', outline: 'none', maxWidth: '150px'
-          }}
-        >
-          {fileOptions.map(f => <option key={f} value={f}>{f}</option>)}
-        </select>
+        {mode !== 'dashboard' && (
+          <select 
+            value={selectedFile}
+            onChange={(e) => setSelectedFile(e.target.value)}
+            style={{
+              background: 'var(--app-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)',
+              padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', outline: 'none', maxWidth: '150px'
+            }}
+          >
+            {fileOptions.map(f => <option key={f} value={f}>{f}</option>)}
+          </select>
+        )}
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
