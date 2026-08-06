@@ -6,7 +6,6 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import cron from 'node-cron';
 import helmet from 'helmet';
-import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 
 // Strict Environment Variable Verification
@@ -28,7 +27,6 @@ if (!isConfigured) {
 
 // Enterprise Security Middlewares
 app.use(helmet()); // Secure HTTP headers
-app.use(mongoSanitize()); // Prevent NoSQL Injection
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
