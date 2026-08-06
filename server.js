@@ -10,14 +10,21 @@ import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
 
 // Strict Environment Variable Verification
+let isConfigured = true;
 if (!process.env.MONGO_URI || !process.env.JWT_SECRET) {
   console.error('[FATAL] Missing required environment variables: MONGO_URI and/or JWT_SECRET.');
-  process.exit(1);
+  isConfigured = false;
 }
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-for-build-only';
 
 const app = express();
+
+if (!isConfigured) {
+  app.use('/api', (req, res) => {
+    res.status(500).json({ error: 'Server Configuration Error: Missing MONGO_URI or JWT_SECRET in Vercel Environment Variables.' });
+  });
+}
 
 // Enterprise Security Middlewares
 app.use(helmet()); // Secure HTTP headers
@@ -43,9 +50,11 @@ const authLimiter = rateLimit({
 app.use('/api/auth', authLimiter);
 
 // Database connection
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log('[Backend] Connected to MongoDB'))
-  .catch(err => console.error('[Backend] MongoDB connection error:', err));
+if (isConfigured) {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('[Backend] Connected to MongoDB'))
+    .catch(err => console.error('[Backend] MongoDB connection error:', err));
+}
 
 // Schemas
 const userSchema = new mongoose.Schema({
