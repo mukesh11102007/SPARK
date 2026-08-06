@@ -465,8 +465,12 @@ const buildProjectFiles = (generatedFiles) => {
 
 const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
   const { runAutomation } = useAutomation();
-  const [status, setStatus] = useState('idle'); // 'idle' | 'deploying' | 'done' | 'error'
-  const [link, setLink] = useState(null);
+  const [status, setStatus] = useState(() => {
+    return localStorage.getItem(`deployUrl_${workspaceId}`) ? 'done' : 'idle';
+  });
+  const [link, setLink] = useState(() => {
+    return localStorage.getItem(`deployUrl_${workspaceId}`) || null;
+  });
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleDeploy = async () => {
@@ -477,6 +481,7 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
       const url = await deployProject(generatedFiles, projectName || 'spark-app', workspaceId);
       setLink(url);
       setStatus('done');
+      localStorage.setItem(`deployUrl_${workspaceId}`, url);
       runAutomation('deployment', { url, timestamp: Date.now() });
     } catch (e) {
       console.error('[Deploy]', e);
@@ -514,7 +519,7 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
           title="Copy link"
         >Copy</button>
         <button
-          onClick={() => { setStatus('idle'); setLink(null); }}
+          onClick={() => { setStatus('idle'); setLink(null); localStorage.removeItem(`deployUrl_${workspaceId}`); }}
           style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#64748b' }}
           title="Deploy again"
         >Redeploy</button>
@@ -1679,6 +1684,23 @@ function App() {
                 />
                 <button className="ide-btn premium-btn invite-btn" onClick={handleInvite}>
                   {inviteToast ? 'Copied' : 'Invite'}
+                </button>
+                <button className="ide-btn" style={{ marginLeft: 8, padding: '4px 12px', background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)' }} onClick={() => {
+                  const link = window.prompt("Paste the Workspace Link to join:");
+                  if (link) {
+                    try {
+                      const url = new URL(link);
+                      if (url.searchParams.has('owner') && url.searchParams.has('workspace')) {
+                        window.location.href = link;
+                      } else {
+                        alert("Invalid workspace link. It should contain '?owner=...' and '&workspace=...'");
+                      }
+                    } catch (e) {
+                      alert("Invalid link format. Please paste a full URL.");
+                    }
+                  }
+                }}>
+                  Join Team
                 </button>
               </div>
             </div>
