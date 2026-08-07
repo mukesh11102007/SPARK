@@ -26,11 +26,9 @@ const transformCodeForBrowser = (code) => {
     });
   });
 
+  // Step 3: Strip ALL single-line and multi-line import statements completely
   let clean = code
-    // Remove lucide-react imports
-    .replace(/import\s+(?:(?:\s*\{[\s\S]*?\}\s*|\s*\*\s*as\s+\w+\s*|\s*[\w$]+\s*,?\s*(?:\{[\s\S]*?\}\s*)?)\s+from\s+)?['"]lucide-react['"];?/gi, '')
-    // Remove ALL other import statements safely without wiping intermediate code
-    .replace(/import\s+(?:(?:\s*\{[\s\S]*?\}\s*|\s*\*\s*as\s+\w+\s*|\s*[\w$]+\s*,?\s*(?:\{[\s\S]*?\}\s*)?)\s+from\s+)?['"][^'"]+['"];?/gi, '')
+    .replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/gi, '')
     .replace(/import\s+['"][^'"]+['"];?/gi, '')
     // Convert top-level const declarations to var so concatenated files don't collide
     .replace(/^const\s+/gm, 'var ')
@@ -46,13 +44,13 @@ const transformCodeForBrowser = (code) => {
     // any remaining export default
     .replace(/export\s+default\s+/g, 'window.DefaultExport = ');
 
-  // Step 3: Prepend React hook destructuring so useState etc. are defined
+  // Prepend React hook destructuring so useState etc. are defined
   let prefix = `var { useState, useEffect, useRef, useCallback, useMemo, useReducer, useContext } = React;\n`;
   if (destructured.size > 0) {
     prefix = `var { ${[...destructured].join(', ')} } = React;\n`;
   }
 
-  // Step 4: Append component registration at END
+  // Append component registration at END
   let suffix = '';
   if (componentName) {
     suffix = `\nif (typeof ${componentName} !== 'undefined') window.DefaultExport = ${componentName};`;
@@ -60,14 +58,27 @@ const transformCodeForBrowser = (code) => {
 
   const rawPrepared = prefix + clean + suffix;
 
-  // Step 5: Transpile JSX to browser JS synchronously using local Babel
+  // Step 4: Transpile JSX to browser JS synchronously using local Babel
+  let transpiled = '';
   try {
-    const transpiled = Babel.transform(rawPrepared, { presets: ['react'] }).code;
-    return transpiled;
+    transpiled = Babel.transform(rawPrepared, { presets: ['react'] }).code;
   } catch (err) {
-    console.warn('[FastPreview] Local Babel transpile warning:', err);
-    return rawPrepared;
+    // If Babel fails because of a residual import statement, strip imports aggressively and transform again
+    const stripped = rawPrepared.replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/gi, '').replace(/import\s+['"][^'"]+['"];?/gi, '');
+    try {
+      transpiled = Babel.transform(stripped, { presets: ['react'] }).code;
+    } catch (e) {
+      console.warn('[FastPreview] Babel transpile fallback warning:', e);
+      transpiled = stripped;
+    }
   }
+
+  // Ensure ZERO import statements ever enter the iframe runner
+  const finalCode = transpiled
+    .replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/gi, '')
+    .replace(/import\s+['"][^'"]+['"];?/gi, '');
+
+  return finalCode;
 };
 
 export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectFrontendFile }) => {
