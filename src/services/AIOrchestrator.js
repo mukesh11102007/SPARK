@@ -27,13 +27,168 @@ const generateSmartClientCode = (prompt = '', projectName = 'App', existingCode 
   
   let compName = projectName ? projectName.replace(/[^a-zA-Z0-9]/g, '') : '';
   if (!compName || compName.toLowerCase() === 'sparkapp' || compName === 'NewProject') {
-    if (p.includes('food') || p.includes('billing') || p.includes('restaurant') || p.includes('hotel') || p.includes('indian') || p.includes('menu')) compName = 'FoodBillingApp';
+    if (p.includes('fitness') || p.includes('workout') || p.includes('gym') || p.includes('health') || p.includes('calorie') || p.includes('exercise') || p.includes('run')) compName = 'FitnessTrackerApp';
+    else if (p.includes('food') || p.includes('billing') || p.includes('restaurant') || p.includes('hotel') || p.includes('indian') || p.includes('menu')) compName = 'FoodBillingApp';
     else if (p.includes('calc') || p.includes('calculator') || p.includes('math')) compName = 'CalculatorApp';
     else if (p.includes('todo') || p.includes('task')) compName = 'TaskManager';
     else if (p.includes('shop') || p.includes('store') || p.includes('cart') || p.includes('ecommerce')) compName = 'EcommerceApp';
     else if (p.includes('dashboard') || p.includes('chart') || p.includes('analytic') || p.includes('revenue')) compName = 'AnalyticsDashboard';
     else if (p.includes('portfolio') || p.includes('landing') || p.includes('saas')) compName = 'SaaSApp';
     else compName = 'CustomWebApp';
+  }
+
+  // Fitness Tracker Generator
+  if (p.includes('fitness') || p.includes('workout') || p.includes('gym') || p.includes('health') || p.includes('calorie') || p.includes('exercise') || p.includes('run')) {
+    return `import React, { useState } from 'react';
+
+export default function ${compName}() {
+  const [workouts, setWorkouts] = useState([
+    { id: 1, name: 'Morning Outdoor Run', category: 'Cardio', duration: '35 mins', calories: 340, date: 'Today' },
+    { id: 2, name: 'Heavy Bench Press & Chest', category: 'Strength', duration: '45 mins', calories: 280, date: 'Today' },
+    { id: 3, name: 'Evening Yoga & Stretching', category: 'Flexibility', duration: '25 mins', calories: 120, date: 'Yesterday' }
+  ]);
+
+  const [workoutName, setWorkoutName] = useState('');
+  const [category, setCategory] = useState('Cardio');
+  const [duration, setDuration] = useState('');
+  const [calories, setCalories] = useState('');
+  const [waterGlasses, setWaterGlasses] = useState(6);
+
+  const handleAddWorkout = (e) => {
+    e.preventDefault();
+    if (!workoutName.trim()) return;
+    setWorkouts([
+      { id: Date.now(), name: workoutName.trim(), category, duration: (duration || 30) + ' mins', calories: parseInt(calories) || 200, date: 'Today' },
+      ...workouts
+    ]);
+    setWorkoutName('');
+    setDuration('');
+    setCalories('');
+  };
+
+  const totalCalories = workouts.reduce((sum, w) => sum + w.calories, 0);
+
+  return (
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px' }}>
+      {/* Header Bar */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid #1f2937', paddingBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
+            🏋️‍♂️
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              FITPULSE — Fitness & Workout Tracker
+            </h1>
+            <p style={{ margin: '4px 0 0', color: '#9ca3af', fontSize: '0.88rem' }}>Track Workouts • Monitor Calories • Daily Hydration & Streaks</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#111827', border: '1px solid #1f2937', padding: '8px 16px', borderRadius: '12px' }}>
+          <span style={{ fontSize: '1.2rem' }}>🔥</span>
+          <div>
+            <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600 }}>CURRENT STREAK</div>
+            <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>7 Days Active</div>
+          </div>
+        </div>
+      </header>
+
+      {/* Metrics Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ fontSize: '0.8rem', color: '#10b981', fontWeight: 700, textTransform: 'uppercase' }}>Calories Burned Today</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: '#f3f4f6' }}>{totalCalories} <span style={{ fontSize: '1rem', color: '#9ca3af', fontWeight: 500 }}>/ 2,200 kcal</span></div>
+          <div style={{ width: '100%', height: '6px', background: '#1f2937', borderRadius: '3px', marginTop: '12px', overflow: 'hidden' }}>
+            <div style={{ width: Math.min((totalCalories / 2200) * 100, 100) + '%', height: '100%', background: '#10b981', borderRadius: '3px' }} />
+          </div>
+        </div>
+
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ fontSize: '0.8rem', color: '#6366f1', fontWeight: 700, textTransform: 'uppercase' }}>Workouts Logged</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: '#f3f4f6' }}>{workouts.length} <span style={{ fontSize: '1rem', color: '#9ca3af', fontWeight: 500 }}>Sessions</span></div>
+        </div>
+
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.8rem', color: '#38bdf8', fontWeight: 700, textTransform: 'uppercase' }}>Water Intake</div>
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button onClick={() => setWaterGlasses(prev => Math.max(prev - 1, 0))} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer' }}>-</button>
+              <button onClick={() => setWaterGlasses(prev => prev + 1)} style={{ background: '#38bdf8', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer' }}>+</button>
+            </div>
+          </div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: '#f3f4f6' }}>💧 {waterGlasses} <span style={{ fontSize: '1rem', color: '#9ca3af', fontWeight: 500 }}>Glasses</span></div>
+        </div>
+      </div>
+
+      {/* Main Grid: Form + Workouts List */}
+      <div style={{ display: 'grid', gridTemplateColumns: '340px 1fr', gap: '28px' }}>
+        {/* Logger Form */}
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '20px', padding: '24px', height: 'fit-content' }}>
+          <h2 style={{ margin: '0 0 18px', fontSize: '1.2rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            ✏️ Log New Workout
+          </h2>
+
+          <form onSubmit={handleAddWorkout} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+            <div>
+              <label style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>Workout Name</label>
+              <input type="text" required placeholder="e.g. 5km Morning Run" value={workoutName} onChange={e => setWorkoutName(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }} />
+            </div>
+
+            <div>
+              <label style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>Category</label>
+              <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }}>
+                <option value="Cardio">🏃 Cardio</option>
+                <option value="Strength">🏋️ Strength Training</option>
+                <option value="Flexibility">🧘 Flexibility & Yoga</option>
+                <option value="HIIT">⚡ High Intensity HIIT</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <div>
+                <label style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>Duration (Mins)</label>
+                <input type="number" placeholder="45" value={duration} onChange={e => setDuration(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>Calories (kcal)</label>
+                <input type="number" placeholder="300" value={calories} onChange={e => setCalories(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }} />
+              </div>
+            </div>
+
+            <button type="submit" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', marginTop: '6px' }}>
+              + Save Workout Session
+            </button>
+          </form>
+        </div>
+
+        {/* Workouts Activity List */}
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '20px', padding: '24px' }}>
+          <h2 style={{ margin: '0 0 20px', fontSize: '1.3rem', fontWeight: 800 }}>📋 Recent Workout Sessions</h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {workouts.map(w => (
+              <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1f2937', border: '1px solid #374151', borderRadius: '12px', padding: '16px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: w.category === 'Cardio' ? '#0284c7' : w.category === 'Strength' ? '#dc2626' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                    {w.category === 'Cardio' ? '🏃' : w.category === 'Strength' ? '🏋️' : '🧘'}
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '1rem', color: '#f3f4f6' }}>{w.name}</div>
+                    <div style={{ color: '#9ca3af', fontSize: '0.82rem', marginTop: '4px' }}>{w.category} • {w.duration} • Logged {w.date}</div>
+                  </div>
+                </div>
+
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981' }}>🔥 {w.calories} kcal</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}`;
   }
 
   // 1. Food Billing & Indian Restaurant App with Login & Signup Auth
