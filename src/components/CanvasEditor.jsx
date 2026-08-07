@@ -43,12 +43,12 @@ const CustomNode = ({ data, id, selected }) => {
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
     }}>
       <div style={{
-        background: '#ffffff',
-        border: selected ? '2px solid #10b981' : '1.5px solid #10b981',
+        background: 'var(--panel-elevated, #ffffff)',
+        border: selected ? '2px solid #10b981' : '1.5px solid var(--panel-border, #10b981)',
         borderRadius: '12px',
         boxShadow: selected
-          ? '0 0 0 4px rgba(16,185,129,0.15), 0 8px 24px rgba(0,0,0,0.1)'
-          : '0 4px 12px rgba(0,0,0,0.08)',
+          ? '0 0 0 4px rgba(16,185,129,0.25), 0 8px 24px rgba(0,0,0,0.2)'
+          : '0 4px 12px rgba(0,0,0,0.15)',
         transition: 'box-shadow 0.15s ease, border-color 0.15s ease',
         overflow: 'hidden',
         cursor: 'grab',
@@ -59,7 +59,7 @@ const CustomNode = ({ data, id, selected }) => {
           background: '#10b981', borderRadius: '0 0 6px 6px',
           width: 22, height: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, color: 'var(--text-main)', fontWeight: 700,
+          fontSize: 11, color: '#ffffff', fontWeight: 700,
           zIndex: 2,
         }}>✓</div>
 
@@ -82,7 +82,7 @@ const CustomNode = ({ data, id, selected }) => {
               style={{
                 border: '1px solid #10b981', borderRadius: 4,
                 padding: '2px 6px', fontSize: '0.82rem', width: '100%',
-                outline: 'none', background: 'var(--glass-bg)', color: 'var(--text-main)'
+                outline: 'none', background: 'var(--app-bg)', color: 'var(--text-main)'
               }}
             />
           ) : (
@@ -111,7 +111,7 @@ const CustomNode = ({ data, id, selected }) => {
                   padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'}
-                onMouseLeave={e => e.currentTarget.style.color = '#9ca3af'}
+                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
               >
                 &lt;/&gt;
               </button>
@@ -137,19 +137,19 @@ const CustomNode = ({ data, id, selected }) => {
               transition: 'color 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
-            onMouseLeave={e => e.currentTarget.style.color = '#d1d5db'}
+            onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
           >×</button>
         </div>
       </div>
 
       {/* Footer info bar */}
       <div style={{
-        borderTop: '1px solid #f0fdf4',
+        borderTop: '1px solid var(--panel-border)',
         padding: '6px 14px',
         display: 'flex',
         alignItems: 'center',
         gap: 6,
-        background: '#f9fafb',
+        background: 'var(--app-bg)',
       }}>
         <span style={{
           background: tagColor, color: '#fff', fontSize: '0.65rem',
