@@ -208,7 +208,8 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
   });
 
   // Bundle primary backend file into api/index.js if needed
-  if (hasBackend && !filesMap['api/index.js']) {
+  let apiFile = 'api/index.js';
+  if (hasBackend && !filesMap['api/index.js'] && !filesMap['api/index.cjs'] && !filesMap['api/index.mjs']) {
     const primaryBackend = backendFiles.find(b => b.filename === 'server.js' || b.filename === 'app.js' || b.filename.includes('index')) || backendFiles[0];
     if (primaryBackend) {
       let serverCode = primaryBackend.code;
@@ -218,8 +219,12 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
       } else if (!serverCode.includes('export default')) {
         serverCode += '\nmodule.exports = app;\nmodule.exports.default = app;';
       }
-      vercelFiles.push({ file: 'api/index.js', data: serverCode });
+      const isESM = serverCode.includes('import ') && !serverCode.includes('require(');
+      apiFile = isESM ? 'api/index.mjs' : 'api/index.cjs';
+      vercelFiles.push({ file: apiFile, data: serverCode });
     }
+  } else if (hasBackend) {
+    apiFile = filesMap['api/index.cjs'] ? 'api/index.cjs' : (filesMap['api/index.mjs'] ? 'api/index.mjs' : 'api/index.js');
   }
 
   // Create vercel.json for rewrites and SPA fallback
@@ -228,7 +233,7 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     data: JSON.stringify({
       version: 2,
       rewrites: [
-        ...(hasBackend ? [{ source: "/api/(.*)", destination: "/api/index.js" }] : []),
+        ...(hasBackend ? [{ source: "/api/(.*)", destination: `/${apiFile}` }] : []),
         { source: "/(.*)", destination: "/index.html" }
       ]
     }, null, 2)
