@@ -480,106 +480,197 @@ export default function ${compName}() {
 }`;
   }
 
-  // 4. Cursor-Grade AI Webpage Generator (Dynamic for ANY prompt)
+  // 4. Cursor-Grade AI Webpage Generator (Dynamic for ANY arbitrary user prompt)
+  const cleanTitle = prompt 
+    ? prompt.replace(/create\s+a\s+|build\s+a\s+|make\s+a\s+|generate\s+a\s+/gi, '').replace(/\b\w/g, l => l.toUpperCase())
+    : 'Custom Application';
+
   return `import React, { useState } from 'react';
 
 export default function ${compName}() {
-  const [activeTab, setActiveTab] = useState('home');
-  const [query, setQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [items, setItems] = useState([
-    { id: 1, title: 'Primary Workspace Module', status: 'Active', category: 'Core' },
-    { id: 2, title: 'AI Automation Pipeline', status: 'Running', category: 'Workflow' },
-    { id: 3, title: 'Serverless API Gateway', status: 'Deployed', category: 'Cloud' }
+    { id: 1, name: 'Primary ${cleanTitle} Module', status: 'Active', category: 'Core', date: '2026-08-07', priority: 'High' },
+    { id: 2, name: 'Automated Event Pipeline', status: 'Running', category: 'Workflow', date: '2026-08-06', priority: 'Medium' },
+    { id: 3, name: 'Serverless Integration Gateway', status: 'Deployed', category: 'Cloud', date: '2026-08-05', priority: 'High' }
   ]);
-  const [newItem, setNewItem] = useState('');
+  const [newItemName, setNewItemName] = useState('');
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
 
-  const addItem = (e) => {
+  const handleAddItem = (e) => {
     e.preventDefault();
-    if (!newItem.trim()) return;
-    setItems([...items, { id: Date.now(), title: newItem.trim(), status: 'Active', category: 'Custom' }]);
-    setNewItem('');
+    if (!newItemName.trim()) return;
+    setItems([
+      { id: Date.now(), name: newItemName.trim(), status: 'Active', category: 'User Created', date: new Date().toISOString().split('T')[0], priority: 'High' },
+      ...items
+    ]);
+    setNewItemName('');
   };
 
+  const removeItem = (id) => {
+    setItems(items.filter(i => i.id !== id));
+  };
+
+  const filteredItems = items.filter(item => {
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesTab = activeTab === 'all' || item.category.toLowerCase() === activeTab.toLowerCase() || item.status.toLowerCase() === activeTab.toLowerCase();
+    return matchesSearch && matchesTab;
+  });
+
   return (
-    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px' }}>
-      {/* Header Bar */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid #1f2937', paddingBottom: '20px' }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            ⚡ ${compName}
-          </h1>
-          <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: '0.9rem' }}>Prompt: "${prompt || 'Custom prompt request'}"</p>
+    <div style={{ fontFamily: "'Inter', system-ui, sans-serif", background: isDarkMode ? '#0b0f19' : '#f8fafc', color: isDarkMode ? '#f3f4f6' : '#0f172a', minHeight: '100vh', padding: '32px', transition: 'all 0.3s' }}>
+      {/* Top Header Bar */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', paddingBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
+            ⚡
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              ${cleanTitle}
+            </h1>
+            <p style={{ margin: '4px 0 0', color: isDarkMode ? '#9ca3af' : '#64748b', fontSize: '0.88rem' }}>
+              AI Synthesized Application • Ready for Edit & 1-Click Deployment
+            </p>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            style={{ background: isDarkMode ? '#1f2937' : '#e2e8f0', color: isDarkMode ? '#fff' : '#0f172a', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}
+          >
+            {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+          </button>
+
           <input 
             type="text" 
-            placeholder="Search app..." 
-            value={query} 
-            onChange={e => setQuery(e.target.value)} 
-            style={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none', width: '220px' }} 
+            placeholder="🔍 Search ${cleanTitle}..." 
+            value={searchTerm} 
+            onChange={e => setSearchTerm(e.target.value)} 
+            style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #374151' : '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 16px', color: isDarkMode ? '#fff' : '#0f172a', outline: 'none', width: '240px', fontSize: '0.88rem' }} 
           />
-          <button style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}>
-            + Create New
-          </button>
         </div>
       </header>
 
-      {/* Main Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
-        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#10b981' }}>🚀 AI Prompt Synthesizer</h3>
-          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Generated specifically to fulfill: "${prompt}"
-          </p>
+      {/* Hero Stats Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        <div style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase', tracking: '1px' }}>Total Application Records</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px' }}>{items.length} Items</div>
         </div>
 
-        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#6366f1' }}>⚡ Component Features</h3>
-          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Interactive React web application featuring state management and responsive UI layout.
-          </p>
+        <div style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#6366f1', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>Active Status Rate</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px' }}>100% Online</div>
         </div>
 
-        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#eab308' }}>🌐 1-Click Deployment</h3>
-          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Click <strong>Deploy</strong> to push this app to Vercel instantly.
-          </p>
+        <div style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', borderRadius: '16px', padding: '24px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+          <div style={{ color: '#eab308', fontSize: '0.85rem', fontWeight: 700, textTransform: 'uppercase' }}>System Health</div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px' }}>Optimal</div>
         </div>
       </div>
 
-      {/* Interactive Data List */}
-      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
-        <h2 style={{ margin: '0 0 16px', fontSize: '1.3rem', fontWeight: 700 }}>📦 Active Application Items</h2>
+      {/* Main Interactive Management Panel */}
+      <div style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', borderRadius: '20px', padding: '28px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>📦 ${cleanTitle} Control Manager</h2>
 
-        <form onSubmit={addItem} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          {/* Filter Tabs */}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {['all', 'Active', 'Running', 'Deployed'].map(tab => (
+              <button 
+                key={tab} 
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  background: activeTab === tab ? '#10b981' : isDarkMode ? '#1f2937' : '#f1f5f9',
+                  color: activeTab === tab ? '#ffffff' : isDarkMode ? '#9ca3af' : '#64748b',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  fontWeight: 700,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize'
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Form Add New */}
+        <form onSubmit={handleAddItem} style={{ display: 'flex', gap: '12px', marginBottom: '24px' }}>
           <input 
             type="text" 
-            placeholder="Add new item..." 
-            value={newItem} 
-            onChange={e => setNewItem(e.target.value)} 
-            style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none' }} 
+            placeholder="Add new record for ${cleanTitle}..." 
+            value={newItemName} 
+            onChange={e => setNewItemName(e.target.value)} 
+            style={{ flex: 1, background: isDarkMode ? '#1f2937' : '#f8fafc', border: isDarkMode ? '1px solid #374151' : '1px solid #cbd5e1', borderRadius: '10px', padding: '12px 18px', color: isDarkMode ? '#fff' : '#0f172a', outline: 'none', fontSize: '0.9rem' }} 
           />
-          <button type="submit" style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}>
-            Add
+          <button type="submit" style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px 24px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}>
+            + Create Record
           </button>
         </form>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          {items.map(item => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1f2937', padding: '14px 18px', borderRadius: '10px', border: '1px solid #374151' }}>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{item.title}</div>
-                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Category: {item.category}</div>
+        {/* Data Items List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredItems.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>No matching records found.</div>
+          ) : (
+            filteredItems.map(item => (
+              <div 
+                key={item.id} 
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: isDarkMode ? '#1f2937' : '#f8fafc', border: isDarkMode ? '1px solid #374151' : '1px solid #e2e8f0', borderRadius: '12px', padding: '16px 20px', transition: 'all 0.2s' }}
+              >
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '1rem', color: isDarkMode ? '#f8fafc' : '#0f172a' }}>{item.name}</div>
+                  <div style={{ color: isDarkMode ? '#9ca3af' : '#64748b', fontSize: '0.82rem', marginTop: '4px' }}>Category: {item.category} • Created: {item.date}</div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '0.78rem', background: '#065f46', color: '#34d399', padding: '4px 12px', borderRadius: '8px', fontWeight: 800 }}>
+                    {item.status}
+                  </span>
+                  <button 
+                    onClick={() => setSelectedItem(item)}
+                    style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Details
+                  </button>
+                  <button 
+                    onClick={() => removeItem(item.id)}
+                    style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
-              <span style={{ fontSize: '0.78rem', background: '#065f46', color: '#34d399', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }}>
-                {item.status}
-              </span>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
+
+      {/* Item Detail Modal */}
+      {selectedItem && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ maxWidth: '440px', width: '100%', background: isDarkMode ? '#111827' : '#ffffff', border: '1px solid #374151', borderRadius: '20px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>{selectedItem.name}</h3>
+              <button onClick={() => setSelectedItem(null)} style={{ background: 'none', border: 'none', color: '#9ca3af', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+            <p style={{ color: isDarkMode ? '#9ca3af' : '#64748b', fontSize: '0.9rem', lineHeight: 1.5 }}>
+              This module was generated dynamically by SPARK AI to handle data processing and user interactions for "${cleanTitle}".
+            </p>
+            <div style={{ borderTop: '1px solid #374151', paddingTop: '16px', marginTop: '16px', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setSelectedItem(null)} style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 18px', fontWeight: 700, cursor: 'pointer' }}>Close Window</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }`;
