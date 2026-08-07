@@ -250,14 +250,14 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         )}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button type="button" className="ide-btn" onClick={handleListen} disabled={busy}
-            style={{ flex: 1, minWidth: '80px', color: isListening ? '#f14c4c' : '', borderColor: isListening ? '#f14c4c' : '' }}>
+            style={{ margin: 0, flex: 1, minWidth: '80px', background: isListening ? '#ef4444' : 'var(--panel-elevated)', border: '1px solid var(--panel-border)', color: isListening ? '#fff' : 'var(--text-main)', cursor: 'pointer' }}>
             {isListening ? '● Listening' : '🎤 Speak'}
           </button>
           <button 
             type="submit" 
             className="ide-btn" 
             disabled={busy || (!textInput.trim() && !projectName.trim())} 
-            style={{ flex: 1, minWidth: '80px', background: busy ? '' : 'var(--accent)', cursor: 'pointer' }}
+            style={{ margin: 0, flex: 1, minWidth: '80px', background: busy ? 'var(--panel-elevated)' : 'var(--accent, #4D3DF7)', color: '#ffffff', border: 'none', cursor: busy ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
           >
             {isProcessing && statusMsg && !statusMsg.includes('Enhancing') ? 'Building...' : '⚡ Build'}
           </button>
@@ -266,7 +266,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
             className="ide-btn"
             onClick={() => processInput(textInput, true)}
             disabled={busy || (!textInput.trim() && !projectName.trim()) || !generatedFiles || Object.keys(generatedFiles).length === 0}
-            style={{ flex: 1, minWidth: '80px', background: 'transparent', borderColor: 'var(--accent)', color: 'var(--accent)', cursor: 'pointer' }}
+            style={{ margin: 0, flex: 1, minWidth: '80px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', cursor: (busy || !generatedFiles || Object.keys(generatedFiles).length === 0) ? 'not-allowed' : 'pointer' }}
             title="Refine existing code with the prompt above"
           >
             {isProcessing && statusMsg && statusMsg.includes('Enhancing') ? 'Enhancing...' : '✨ Enhance'}
@@ -603,9 +603,10 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
 
   return (
     <button
-      className="ide-btn premium-btn share-btn"
+      className="ide-btn"
       onClick={handleDeploy}
       disabled={!hasFiles}
+      style={{ margin: 0, width: 'auto', padding: '6px 16px', fontSize: '0.8rem', background: hasFiles ? 'var(--accent, #4D3DF7)' : 'var(--panel-elevated)', color: hasFiles ? '#ffffff' : 'var(--text-muted)', border: hasFiles ? 'none' : '1px solid var(--panel-border)', opacity: hasFiles ? 1 : 0.6, cursor: hasFiles ? 'pointer' : 'not-allowed' }}
       title={hasFiles ? 'Publish to cloud and get shareable link' : 'Generate a component first'}
     >
       Deploy
@@ -1873,10 +1874,10 @@ function App() {
                   projectName={appProjectName} 
                   workspaceId={getOrCreateWorkspaceId()} 
                 />
-                <button className="ide-btn premium-btn invite-btn" onClick={handleInvite}>
+                <button className="ide-btn" style={{ margin: 0, width: 'auto', padding: '6px 14px', fontSize: '0.8rem', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', cursor: 'pointer' }} onClick={handleInvite}>
                   {inviteToast ? 'Copied' : 'Invite'}
                 </button>
-                <button className="ide-btn" style={{ marginLeft: 8, padding: '4px 12px', background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)' }} onClick={() => {
+                <button className="ide-btn" style={{ margin: 0, marginLeft: 8, width: 'auto', padding: '6px 14px', fontSize: '0.8rem', background: 'transparent', border: '1px solid var(--accent, #4D3DF7)', color: 'var(--text-main)', cursor: 'pointer' }} onClick={() => {
                   const link = window.prompt("Paste the Workspace Link to join:");
                   if (link) {
                     try {
