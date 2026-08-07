@@ -1019,13 +1019,16 @@ The user has provisioned a real Supabase database. You MUST write this component
 - The UI MUST reflect real data fetched from this Supabase table.
 `;
   } else if (needsDb) {
+    const defaultUrl = import.meta.env.VITE_SUPABASE_URL || 'https://mock.supabase.co';
+    const defaultKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'mock-key';
+    
     return `
 [SUPABASE DATABASE INJECTION]
 The user requested a feature that requires a database/backend (e.g., login, save, cart, etc.).
-Since they might be a non-technical user, you MUST inject a functional Supabase mock implementation!
+Since they might be a non-technical user, you MUST inject a functional Supabase implementation using the system's default database!
 - Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
-- Initialize a mock client OUTSIDE the component:
-  \`const supabase = window.supabase.createClient('https://mock.supabase.co', 'mock-key');\`
+- Initialize the client OUTSIDE the component using the provided credentials:
+  \`const supabase = window.supabase.createClient('${defaultUrl}', '${defaultKey}');\`
 - Build the component assuming \`supabase.from('app_data').insert(...)\` and \`supabase.from('app_data').select(...)\` are available.
 - For login/signup pages, use \`supabase.auth.signInWithPassword({ email, password })\` and \`supabase.auth.signUp({ email, password })\`.
 - Ensure the frontend fully implements the necessary state and UI for these database interactions.
