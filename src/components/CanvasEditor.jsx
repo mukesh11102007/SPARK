@@ -59,7 +59,7 @@ const CustomNode = ({ data, id, selected }) => {
           background: '#10b981', borderRadius: '0 0 6px 6px',
           width: 22, height: 18,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 11, color: '#fff', fontWeight: 700,
+          fontSize: 11, color: 'var(--text-main)', fontWeight: 700,
           zIndex: 2,
         }}>✓</div>
 
@@ -82,13 +82,13 @@ const CustomNode = ({ data, id, selected }) => {
               style={{
                 border: '1px solid #10b981', borderRadius: 4,
                 padding: '2px 6px', fontSize: '0.82rem', width: '100%',
-                outline: 'none', background: '#f0fdf4', color: '#064e3b'
+                outline: 'none', background: 'var(--glass-bg)', color: 'var(--text-main)'
               }}
             />
           ) : (
             <div
               style={{
-                fontWeight: 600, fontSize: '0.85rem', color: '#111827',
+                fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)',
                 whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 cursor: 'text',
               }}
@@ -107,7 +107,7 @@ const CustomNode = ({ data, id, selected }) => {
                 title="Edit code"
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: '#9ca3af', fontSize: 13, fontWeight: 'bold',
+                  color: 'var(--text-muted)', fontSize: 13, fontWeight: 'bold',
                   padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
                 }}
                 onMouseEnter={e => e.currentTarget.style.color = '#3b82f6'}
@@ -120,7 +120,7 @@ const CustomNode = ({ data, id, selected }) => {
                 title="Copy code"
                 style={{
                   background: 'none', border: 'none', cursor: 'pointer',
-                  color: copied ? '#10b981' : '#9ca3af', fontSize: 13,
+                  color: copied ? '#10b981' : 'var(--text-muted)', fontSize: 13,
                   padding: '2px 3px', lineHeight: 1, transition: 'color 0.15s',
                 }}
               >
@@ -133,7 +133,7 @@ const CustomNode = ({ data, id, selected }) => {
             title="Delete"
             style={{
               background: 'none', border: 'none', cursor: 'pointer',
-              color: '#d1d5db', fontSize: 16, padding: '2px 3px', lineHeight: 1,
+              color: 'var(--text-muted)', fontSize: 16, padding: '2px 3px', lineHeight: 1,
               transition: 'color 0.15s',
             }}
             onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
@@ -156,7 +156,7 @@ const CustomNode = ({ data, id, selected }) => {
           fontWeight: 700, padding: '1px 6px', borderRadius: 4,
           textTransform: 'uppercase', letterSpacing: '0.04em',
         }}>.{ext}</span>
-        <span style={{ color: '#6b7280', fontSize: '0.72rem' }}>React Component</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>React Component</span>
       </div>
       </div>
 

@@ -72,7 +72,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
       <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
         <label style={{ 
           cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center', 
-          alignItems: 'center', gap: '6px', background: 'var(--accent-color, #4d3df7)', 
+          alignItems: 'center', gap: '6px', background: 'var(--accent, #4d3df7)', 
           color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' 
         }} title="Upload custom file">
           <span style={{ fontSize: '14px' }}>⬆️</span> Upload
@@ -83,7 +83,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
           style={{
             cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center', 
             alignItems: 'center', gap: '6px', background: 'var(--glass-bg)', 
-            color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: 'none'
+            color: 'var(--text-main)', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: 'none'
           }} title="Create new file">
           <span style={{ fontSize: '14px' }}>➕</span> New
         </button>
@@ -157,6 +157,9 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
       } else {
         const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig, stylingPreference);
         code = { ...(generatedFiles || {}), ...newCode };
+        if (workspaceType === 'personal') {
+          setPersonalProjectName(finalProjectName);
+        }
       }
 
       setStatusMsg(isEnhance ? '✨ Enhancing & reviewing...' : '🔍 Reviewing code before applying...');
@@ -657,7 +660,8 @@ export default function AdminDashboard() {
 }`,
       'README.md': `# Admin Dashboard Template\n\nA full production-ready admin dashboard pre-built with stats, filters, and transaction tables.`
     };
-  } else if (name.includes('E-Commerce') || name.includes('Store')) {
+  }
+  if (name.includes('E-Commerce') || name.includes('Store')) {
     return {
       'App.jsx': `import React, { useState } from 'react';
 
@@ -907,6 +911,103 @@ export default function PortfolioApp() {
       'README.md': `# Portfolio Template\n\nA modern developer portfolio pre-built with project cards and hero banner.`
     };
   }
+  
+  if (name.includes('Canvas') || name.includes('Visual')) {
+    return {
+      'App.jsx': `import React, { useState } from 'react';
+
+export default function VisualPrototypingCanvas() {
+  const [nodes, setNodes] = useState([
+    { id: 1, x: 100, y: 150, title: 'Header.jsx', type: 'component' },
+    { id: 2, x: 400, y: 100, title: 'Hero.jsx', type: 'component' },
+    { id: 3, x: 400, y: 250, title: 'Footer.jsx', type: 'component' }
+  ]);
+  
+  const [dragNode, setDragNode] = useState(null);
+
+  const handlePointerDown = (e, id) => {
+    e.target.setPointerCapture(e.pointerId);
+    setDragNode({ id, startX: e.clientX, startY: e.clientY });
+  };
+
+  const handlePointerMove = (e) => {
+    if (!dragNode) return;
+    const dx = e.clientX - dragNode.startX;
+    const dy = e.clientY - dragNode.startY;
+    setNodes(nodes.map(n => n.id === dragNode.id ? { ...n, x: n.x + dx, y: n.y + dy } : n));
+    setDragNode({ id: dragNode.id, startX: e.clientX, startY: e.clientY });
+  };
+
+  const handlePointerUp = (e) => {
+    e.target.releasePointerCapture(e.pointerId);
+    setDragNode(null);
+  };
+
+  return (
+    <div style={{ width: '100%', height: '100vh', background: '#f8fafc', position: 'relative', overflow: 'hidden', fontFamily: 'sans-serif' }}>
+      <div style={{ position: 'absolute', top: 20, left: 20, background: '#fff', padding: '12px 24px', borderRadius: 8, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)', fontWeight: 600, color: '#0f172a', zIndex: 10 }}>
+        Visual Component Architecture
+      </div>
+      
+      {/* Background Grid */}
+      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 0)', backgroundSize: '20px 20px' }}></div>
+      
+      <div style={{ position: 'absolute', inset: 0 }} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp}>
+        <svg style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          <path d={\`M 250 180 C 325 180, 325 130, 400 130\`} fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" />
+          <path d={\`M 250 180 C 325 180, 325 280, 400 280\`} fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5,5" />
+        </svg>
+
+        {nodes.map(n => (
+          <div
+            key={n.id}
+            onPointerDown={(e) => handlePointerDown(e, n.id)}
+            style={{
+              position: 'absolute',
+              left: n.x,
+              top: n.y,
+              width: 150,
+              background: '#fff',
+              border: '2px solid #e2e8f0',
+              borderRadius: 8,
+              padding: 12,
+              cursor: 'grab',
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 8
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#3b82f6', fontWeight: 600 }}>
+              <i className="fa fa-cube" /> {n.title}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: 4, display: 'inline-block', width: 'fit-content' }}>
+              React Node
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}`
+    };
+  }
+
+  // Fallback default
+  return {
+    'App.jsx': `import React from 'react';
+
+export default function App() {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontFamily: 'sans-serif', background: '#f8fafc', color: '#0f172a' }}>
+      <div style={{ textAlign: 'center', padding: '40px', background: '#fff', borderRadius: '12px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}>
+        <h1 style={{ margin: '0 0 16px' }}>Welcome to SPARK</h1>
+        <p style={{ margin: 0, color: '#64748b' }}>Your new project is ready to build!</p>
+      </div>
+    </div>
+  );
+}`
+  };
 };
 
 // ── Main App ───────────────────────────────────────────────────────────────────
@@ -1732,7 +1833,7 @@ function App() {
             </div>
 
             {/* Bottom Terminal Panel (Hidden entirely if non-technical, unless AI builder needs it) */}
-            <div className="bottom-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="bottom-panel" style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, minHeight: '300px' }}>
               <div className="panel-header">
                 {(isNonTech ? ['ai builder'] : ['ai builder', 'terminal', 'output']).map(t => (
                   <span key={t}
@@ -1801,15 +1902,23 @@ function App() {
 
       {/* Real-time Notifications Toast */}
       {notifications.length > 0 && (
-        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ position: 'fixed', top: '80px', right: '20px', zIndex: 9999, display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {notifications.map((n) => (
             <div key={n.id} style={{
-              background: n.type === 'success' ? '#10B981' : 'var(--panel-elevated)',
-              color: n.type === 'success' ? '#fff' : 'var(--text-main)', padding: '12px 20px', borderRadius: '8px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontSize: '0.9rem', fontWeight: 500,
-              display: 'flex', alignItems: 'center', gap: '10px',
-              border: n.type === 'success' ? '1px solid #059669' : '1px solid var(--panel-border)',
-              animation: 'slideInRight 0.3s ease-out forwards'
+              background: n.type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'var(--panel-elevated)',
+              color: n.type === 'success' ? '#fff' : 'var(--text-main)', 
+              padding: '12px 20px', 
+              borderRadius: '12px',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.15)', 
+              fontSize: '0.85rem', 
+              fontWeight: 600,
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '10px',
+              border: n.type === 'success' ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid var(--panel-border)',
+              animation: 'slideInRight 0.3s ease-out forwards',
+              maxWidth: '350px'
             }}>
               {n.type === 'success' ? '✨' : '🔔'} {n.message}
             </div>

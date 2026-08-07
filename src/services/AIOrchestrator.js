@@ -80,6 +80,35 @@ const extractCode = (raw, projectName) => {
   if (text.startsWith('{') || text.startsWith('[')) {
     try {
       const parsed = JSON.parse(text.replace(/```json/gi, '').replace(/```/g, '').trim());
+      
+      // Handle mapping of filenames to code (e.g. n8n webhook might return this)
+      if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+        const potentialFiles = {};
+        for (const [key, val] of Object.entries(parsed)) {
+          if (typeof val === 'string' && (val.includes('export default') || val.includes('import React'))) {
+            const fname = key.endsWith('.jsx') || key.endsWith('.js') ? key : `${key}.jsx`;
+            potentialFiles[fname] = val.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+          }
+        }
+        if (Object.keys(potentialFiles).length > 0) return potentialFiles;
+      }
+      
+      // Handle array of file objects
+      if (Array.isArray(parsed)) {
+        const potentialFiles = {};
+        for (const item of parsed) {
+           if (item && typeof item === 'object' && (item.name || item.filename || item.file) && (item.code || item.content)) {
+             const fname = item.name || item.filename || item.file;
+             const code = item.code || item.content;
+             if (typeof code === 'string') {
+               const safeName = fname.endsWith('.jsx') || fname.endsWith('.js') ? fname : `${fname}.jsx`;
+               potentialFiles[safeName] = code.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+             }
+           }
+        }
+        if (Object.keys(potentialFiles).length > 0) return potentialFiles;
+      }
+
       const extracted = findCodeInObject(parsed);
       if (extracted) {
         text = extracted;
@@ -92,14 +121,18 @@ const extractCode = (raw, projectName) => {
   // Treat as raw code
   const clean = text.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
   if (!clean.startsWith('{') && !clean.startsWith('[') && clean.length > 50 && (clean.includes('export default') || (clean.includes('function') && clean.includes('return')))) {
-    const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
-    let fileName;
-    if (match && match[1]) {
-      fileName = `${match[1]}.jsx`;
+    let fileName = null;
+    if (projectName && (projectName.endsWith('.jsx') || projectName.endsWith('.js'))) {
+      fileName = projectName.trim();
     } else {
-      let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
-      if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
-      fileName = `${safeName}Component.jsx`;
+      const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
+      if (match && match[1]) {
+        fileName = `${match[1]}.jsx`;
+      } else {
+        let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
+        if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
+        fileName = `${safeName}Component.jsx`;
+      }
     }
     return { [fileName]: clean };
   }
@@ -152,9 +185,9 @@ const generateWithGemini = async (prompt, projectName, dbConfig, stylingPref = '
   const raw = await executeWithFallback(prompt, `You are an expert React developer. Generate a complete React application for the following request.
 
 CRITICAL RULES — MUST FOLLOW:
-1. If generating a single file, return ONLY raw JSX/React code. If generating multiple files (like a multi-page app), before EACH file's code, you MUST output exactly: // FILE: FileName.jsx
+1. BY DEFAULT, return ONLY a SINGLE raw JSX/React file. ONLY if the user EXPLICITLY asks for multiple files or pages, you must generate multiple files and connect them. If generating multiple files, before EACH file's code, you MUST output exactly: // FILE: FileName.jsx
 2. Imports: import React, { useState, useEffect, useRef } from 'react'; ${stylingPref === 'styled-components' ? "and import styled from 'styled-components';" : ""}
-3. ROUTING: For multi-page apps, you MUST create an App.jsx that uses react-router-dom for routing. 'react-router-dom' is globally available, so import it like: import { BrowserRouter, MemoryRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
+3. ROUTING: Only if generating multiple pages, use 'react-router-dom' (globally available).
 4. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
 5. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes like fa-home, fa-user, fa-cog).
 ${getStylingPrompt(stylingPref)}
@@ -187,7 +220,7 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
   const timeout = setTimeout(() => controller.abort(), 120_000);
 
   try {
-    const premiumPrompt = `\n\nCRITICAL UI/UX REQUIREMENT: You must generate a design that is extremely premium, modern, and visually stunning. Avoid generic layouts.\nCRITICAL ROUTING & MULTI-PAGE RULES: If the user requests multiple pages or an interconnected app, you MUST generate multiple files. Before EACH file's code, output exactly: // FILE: FileName.jsx\nUse 'react-router-dom' for routing (e.g., import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom').\n${getStylingPrompt(stylingPref)}`;
+    const premiumPrompt = `\n\nCRITICAL UI/UX REQUIREMENT: You must generate a design that is extremely premium, modern, and visually stunning. Avoid generic layouts.\nCRITICAL ARCHITECTURE RULES: BY DEFAULT, you MUST generate a SINGLE-FILE React component. ONLY generate multiple files if the user EXPLICITLY asks for a "multi-page", "multi-file", or "website with multiple pages". IF multiple files are requested, you MUST connect them together (e.g. via react-router-dom) and before EACH file's code, output exactly: // FILE: FileName.jsx\n${getStylingPrompt(stylingPref)}`;
     const fullPrompt = prompt + premiumPrompt + '\n' + getDbPrompt(dbConfig);
     const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
