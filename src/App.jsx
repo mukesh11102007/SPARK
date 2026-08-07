@@ -1665,19 +1665,39 @@ function App() {
         const url = new URL(window.location.href);
 
         if (type === 'new') {
-          url.searchParams.delete('workspace');
-          window.history.replaceState({}, '', url.toString());
+          const newWsId = `ws_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+          url.searchParams.set('workspace', newWsId);
+          window.history.pushState({}, '', url.toString());
+          localStorage.setItem('spark_workspace_id', newWsId);
+
+          const title = options.template 
+            ? `${options.template} Workspace` 
+            : options.initialPrompt 
+              ? (options.initialPrompt.length > 25 ? options.initialPrompt.substring(0, 25) + '...' : options.initialPrompt)
+              : `Workspace ${newWsId.substring(3, 9)}`;
+
+          try {
+            const saved = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
+            saved.unshift({
+              id: newWsId,
+              title,
+              timestamp: Date.now(),
+              tags: ['Team', 'React'],
+              iconColor: 'linear-gradient(135deg, #4D3DF7, #8A2BE2)',
+              iconEmoji: '✨'
+            });
+            localStorage.setItem('spark_recent_workspaces', JSON.stringify(saved.slice(0, 10)));
+          } catch (e) {}
 
           if (options.initialPrompt) {
-            const promptTitle = options.initialPrompt.length > 25 ? options.initialPrompt.substring(0, 25) + '...' : options.initialPrompt;
-            setPersonalProjectName(promptTitle);
+            setPersonalProjectName(title);
             setWorkspaceType('personal');
             localStorage.setItem('spark_workspace_type', 'personal');
             setActiveActivity('preview');
-            // Trigger AI generation immediately
-            generateAppFromVoice(options.initialPrompt, promptTitle, dbConfig).then(code => {
+            generateAppFromVoice(options.initialPrompt, title, dbConfig).then(code => {
               setGeneratedFiles(code);
-              updatePersonalFiles(code);
+              localStorage.setItem(`spark_personal_files_${newWsId}`, JSON.stringify(code));
+              setPersonalFiles(code);
               broadcastFiles(code);
             }).catch(err => console.error('AI Generation error:', err));
           } else if (options.template) {
@@ -1686,11 +1706,10 @@ function App() {
             localStorage.setItem('spark_workspace_type', 'personal');
             const templateFiles = getTemplateCode(options.template);
             setGeneratedFiles(templateFiles);
-            updatePersonalFiles(templateFiles);
+            localStorage.setItem(`spark_personal_files_${newWsId}`, JSON.stringify(templateFiles));
+            setPersonalFiles(templateFiles);
           } else {
             setGeneratedFiles({});
-            updatePersonalFiles({});
-            setTeamFiles(null);
             setPersonalProjectName('New Project');
             setWorkspaceType('personal');
             localStorage.setItem('spark_workspace_type', 'personal');
