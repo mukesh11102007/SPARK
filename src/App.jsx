@@ -8,7 +8,8 @@ import { CodeReviewPanel } from './components/CodeReviewPanel';
 import { UserIdentityModal } from './components/UserIdentityModal';
 import {
   getOrCreateUserIdentity, getOrCreateWorkspaceId, getWorkspaceInviteUrl,
-  joinWorkspacePresence, broadcastCodeGenerated, fetchWorkspaceFiles, broadcastNotification
+  joinWorkspacePresence, broadcastCodeGenerated, fetchWorkspaceFiles, broadcastNotification,
+  broadcastWorkspaceNameUpdate
 } from './services/SupabaseService';
 import { provisionUserDatabase, fetchWorkspaceDatabase } from './services/DatabaseService';
 import sdk from '@stackblitz/sdk';
@@ -1213,8 +1214,8 @@ function App() {
                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                body: JSON.stringify({ title: newName })
              }).catch(e => console.error('Failed to sync title to DB', e));
-             broadcastWorkspaceNameUpdate(newName);
            }
+           broadcastWorkspaceNameUpdate(newName);
          }
        } catch(e) {}
     }
@@ -1318,8 +1319,40 @@ function App() {
     // Fetch historical workspace files from Express backend
     const loadTeamFiles = async () => {
       const activeWs = localStorage.getItem('spark_workspace_type') || 'team';
+      const token = localStorage.getItem('spark_token');
+      
+      const loadFromSupabaseFallback = () => {
+        fetchWorkspaceFiles(workspaceId).then(supaFiles => {
+          if (supaFiles && Object.keys(supaFiles).length > 0) {
+            setTeamFiles(supaFiles);
+            if (activeWs === 'team') {
+              setGeneratedFiles(supaFiles);
+            }
+            if (token) {
+              fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ files: supaFiles })
+              });
+            }
+          } else {
+            setTeamFiles({});
+            if (activeWs === 'team') setGeneratedFiles({});
+          }
+        });
+      };
+
+      if (!token) {
+        try {
+          const savedWorkspaces = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
+          const currentWs = savedWorkspaces.find(w => w.id === workspaceId);
+          if (currentWs && currentWs.title) {
+            setTeamProjectName(currentWs.title);
+          }
+        } catch(e) {}
+      }
+
       try {
-        const token = localStorage.getItem('spark_token');
         if (token) {
           const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
             headers: { 'Authorization': `Bearer ${token}` }
@@ -1336,38 +1369,17 @@ function App() {
               }
               logActivity(`Fetched ${Object.keys(data.files).length} files from Workspace Database.`);
             } else {
-              // Fallback to Supabase logs for older workspaces
-              fetchWorkspaceFiles(workspaceId).then(supaFiles => {
-                if (supaFiles && Object.keys(supaFiles).length > 0) {
-                  setTeamFiles(supaFiles);
-                  if (activeWs === 'team') {
-                    setGeneratedFiles(supaFiles);
-                  }
-                  logActivity(`Migrated ${Object.keys(supaFiles).length} files from Supabase history.`);
-                  fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                    body: JSON.stringify({ files: supaFiles })
-                  });
-                } else {
-                  // Workspace is empty - clear team & generated files!
-                  setTeamFiles({});
-                  if (activeWs === 'team') setGeneratedFiles({});
-                }
-              });
+              loadFromSupabaseFallback();
             }
           } else {
-            setTeamFiles({});
-            if (activeWs === 'team') setGeneratedFiles({});
+            loadFromSupabaseFallback();
           }
         } else {
-          setTeamFiles({});
-          if (activeWs === 'team') setGeneratedFiles({});
+          loadFromSupabaseFallback();
         }
       } catch (err) {
         console.error('Failed to load team files from DB', err);
-        setTeamFiles({});
-        if (activeWs === 'team') setGeneratedFiles({});
+        loadFromSupabaseFallback();
       }
     };
     loadTeamFiles();

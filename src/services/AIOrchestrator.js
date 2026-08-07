@@ -1399,9 +1399,9 @@ Return ONLY the raw modified code. Do not include markdown codeblocks (no \`\`\`
     if (response) {
       // Strip markdown codeblocks if AI accidentally included them
       let clean = response.trim();
-      if (clean.startsWith('\`\`\`')) {
+      if (clean.startsWith('`\``')) {
         clean = clean.split('\\n').slice(1).join('\\n');
-        if (clean.endsWith('\`\`\`')) clean = clean.slice(0, -3);
+        if (clean.endsWith('`\``')) clean = clean.slice(0, -3);
       }
       return clean.trim() || code;
     }

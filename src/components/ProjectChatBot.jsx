@@ -35,7 +35,9 @@ export const ProjectChatBot = ({ files, mode = 'workspace' }) => {
       if (mode === 'dashboard') {
         promptModifier = `[SYSTEM CONTEXT OVERRIDE: The user is in the global SPARK Dashboard. Focus your answers entirely on explaining SPARK Studio features, how the platform works, what buttons do, and general navigation guidance. Ignore any code files.]\n\n${userMessage}`;
       } else if (selectedFile !== 'All Files') {
-        promptModifier = `[CRITICAL: The user is asking specifically about the file "${selectedFile}". Focus your analysis and answers strictly on this file unless they ask otherwise.]\n\n${userMessage}`;
+        promptModifier = `[CRITICAL: The user is asking specifically about the file "${selectedFile}". You are a strict Code and File Assistant. You must ONLY answer questions related to the project's codebase, files, and programming. Refuse to answer off-topic queries. Focus strictly on this file unless asked otherwise.]\n\n${userMessage}`;
+      } else {
+        promptModifier = `[CRITICAL: You are a strict Code and File Assistant. You must ONLY answer questions related to the project's codebase, files, and programming. Refuse to answer general questions or off-topic queries.]\n\n${userMessage}`;
       }
 
       // generate a static session id per component mount if it doesn't exist

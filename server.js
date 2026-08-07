@@ -138,12 +138,13 @@ app.post('/api/auth/login', async (req, res) => {
 
 app.put('/api/user/profile', auth, async (req, res) => {
   try {
-    const { name, bio, avatarUrl } = req.body;
+    const { name, bio, avatarUrl, developerType } = req.body;
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ error: 'User not found' });
     
     if (name) user.name = name;
     if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+    if (developerType !== undefined) user.developerType = developerType;
     
     await user.save();
     res.json({ success: true, user: { id: user._id, name: user.name, email: user.email, developerType: user.developerType, avatarUrl: user.avatarUrl } });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { API_BASE_URL } from '../config';
 import { MyAppsPanel } from './MyAppsPanel';
+import { broadcastWorkspaceNameUpdate, broadcastRoleUpdate, getWorkspaceInviteUrl } from '../services/SupabaseService';
 
 const SidebarIcon = ({ path, label, active, onClick }) => (
   <div onClick={onClick} style={{
@@ -315,9 +316,8 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     const val = e.target.value;
     setTeamWorkspaceName(val);
     localStorage.setItem('spark_team_ws_name', val);
-    import('../services/SupabaseService').then(({ broadcastWorkspaceNameUpdate }) => {
-      broadcastWorkspaceNameUpdate(val);
-    });
+    broadcastWorkspaceNameUpdate(val);
+
   };
 
   const handleRenameWorkspace = async (id, oldTitle) => {
@@ -437,21 +437,21 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       } catch (e) { console.error('Failed to update role on backend', e); }
     }
 
-    import('../services/SupabaseService').then(({ broadcastRoleUpdate }) => {
-      broadcastRoleUpdate(memberKey, newRole);
-    });
+    broadcastRoleUpdate(memberKey, newRole);
+
   };
 
   const [profileForm, setProfileForm] = React.useState({
     name: identity?.name || '',
     email: identity?.email || '',
     bio: identity?.bio || 'Full stack developer & AI explorer',
-    avatarUrl: identity?.avatarUrl || ''
+    avatarUrl: identity?.avatarUrl || '',
+    developerType: identity?.developerType || 'non-technical'
   });
 
   React.useEffect(() => {
     if (identity) {
-      setProfileForm(prev => ({ ...prev, name: identity.name, email: identity.email, bio: identity.bio || prev.bio, avatarUrl: identity.avatarUrl || prev.avatarUrl }));
+      setProfileForm(prev => ({ ...prev, name: identity.name, email: identity.email, bio: identity.bio || prev.bio, avatarUrl: identity.avatarUrl || prev.avatarUrl, developerType: identity.developerType || prev.developerType }));
     }
   }, [identity]);
 
@@ -468,7 +468,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         await fetch(`${API_BASE_URL}/api/user/profile`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ name: profileForm.name, bio: profileForm.bio, avatarUrl: profileForm.avatarUrl })
+          body: JSON.stringify({ name: profileForm.name, bio: profileForm.bio, avatarUrl: profileForm.avatarUrl, developerType: profileForm.developerType })
         });
       }
     } catch (e) {
@@ -751,13 +751,11 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
 
     if (activePage === 'members') {
       const handleInvite = () => {
-        import('../services/SupabaseService').then(({ getWorkspaceInviteUrl }) => {
-          const url = getWorkspaceInviteUrl();
-          navigator.clipboard.writeText(url).then(() => {
-            alert('Invite link copied to clipboard!');
-          }).catch(() => {
-            prompt('Copy this invite link:', url);
-          });
+        const url = getWorkspaceInviteUrl();
+        navigator.clipboard.writeText(url).then(() => {
+          alert('Invite link copied to clipboard!');
+        }).catch(() => {
+          prompt('Copy this invite link:', url);
         });
       };
 
@@ -982,6 +980,13 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Bio</label>
                     <input type="text" value={profileForm.bio} onChange={e => setProfileForm(prev => ({...prev, bio: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Account Type</label>
+                    <select value={profileForm.developerType} onChange={e => setProfileForm(prev => ({...prev, developerType: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }}>
+                      <option value="technical">Developer</option>
+                      <option value="non-technical">Non-Developer</option>
+                    </select>
                   </div>
                   <div style={{ paddingTop: '16px' }}>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Profile Avatar</label>
