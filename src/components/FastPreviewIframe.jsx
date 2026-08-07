@@ -134,6 +134,8 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
   <script src="https://unpkg.com/@remix-run/router@1.15.3/dist/router.umd.min.js"></script>
   <script src="https://unpkg.com/react-router@6.22.3/dist/umd/react-router.production.min.js"></script>
   <script src="https://unpkg.com/react-router-dom@6.22.3/dist/umd/react-router-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.5/babel.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone@7.23.5/babel.min.js"></script>
   <script>
     if (window.define && window.define.amd) { delete window.define.amd; delete window.define; }
@@ -161,81 +163,96 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
           msg.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
       }
 
-      try {
-        var rawCode = ${JSON.stringify(allCode)};
-        window.LucideIcons = new Proxy({}, { get: function(target, prop) { return function() { return React.createElement('span', {className: 'lucide-mock'}, '['+prop+']'); } } });
-        
-        if (window.styled && window.styled.default) {
-          window.styled = window.styled.default;
-        }
-        if (window.styled) {
-          window.createGlobalStyle = window.styled.createGlobalStyle;
-          window.keyframes = window.styled.keyframes;
-          window.ThemeProvider = window.styled.ThemeProvider;
-        }
-
-        if (window.ReactRouterDOM) {
-          window.BrowserRouter = window.ReactRouterDOM.BrowserRouter;
-          window.MemoryRouter = window.ReactRouterDOM.MemoryRouter;
-          window.Routes = window.ReactRouterDOM.Routes;
-          window.Route = window.ReactRouterDOM.Route;
-          window.Link = window.ReactRouterDOM.Link;
-          window.useNavigate = window.ReactRouterDOM.useNavigate;
-          window.useLocation = window.ReactRouterDOM.useLocation;
-          window.useParams = window.ReactRouterDOM.useParams;
-        }
-        if (!window.supabase || !window.supabase.createClient) {
-          window.supabase = {
-            createClient: function() {
-              return {
-                from: function() {
-                  return {
-                    select: function() { return Promise.resolve({ data: [], error: null }); },
-                    insert: function() { return Promise.resolve({ data: [], error: null }); },
-                    update: function() { return Promise.resolve({ data: [], error: null }); },
-                    delete: function() { return Promise.resolve({ data: [], error: null }); },
-                    on: function() { return { subscribe: function() {} }; }
-                  };
-                }
-              };
-            }
-          };
-        }
-        
-        var compiledCode = '';
-        try {
-          compiledCode = Babel.transform(rawCode, { presets: ['react'] }).code;
-        } catch (compileErr) {
-          showError('Syntax / Compilation Error', compileErr.message);
+      var attempts = 0;
+      function executeCode() {
+        if (typeof Babel === 'undefined' || !Babel.transform) {
+          attempts++;
+          if (attempts < 40) {
+            setTimeout(executeCode, 50);
+            return;
+          }
+          showError('Babel Loading Timeout', 'Babel compiler CDN took too long to load. Retrying preview...');
           return;
         }
 
-        var runner = new Function(compiledCode);
-        runner();
-
-        var container = document.getElementById('root');
-        var root = ReactDOM.createRoot(container);
-        var Target = window.DefaultExport;
-
-        if (!Target) {
-          var funcs = Object.keys(window).filter(function(k) {
-            return typeof window[k] === 'function' && /^[A-Z]/.test(k) && k !== 'React' && k !== 'ReactDOM';
-          });
-          if (funcs.length > 0) Target = window[funcs[0]];
-        }
-
-        if (Target) {
-          if (window.ReactRouterDOM) {
-            root.render(React.createElement(window.ReactRouterDOM.MemoryRouter, null, React.createElement(Target)));
-          } else {
-            root.render(React.createElement(Target));
+        try {
+          var rawCode = ${JSON.stringify(allCode)};
+          window.LucideIcons = new Proxy({}, { get: function(target, prop) { return function() { return React.createElement('span', {className: 'lucide-mock'}, '['+prop+']'); } } });
+          
+          if (window.styled && window.styled.default) {
+            window.styled = window.styled.default;
           }
-        } else {
-          showError('Export Error', 'Component loaded, but no default export or main component was found in this file.\\nMake sure your component includes: export default function ComponentName() { ... }');
+          if (window.styled) {
+            window.createGlobalStyle = window.styled.createGlobalStyle;
+            window.keyframes = window.styled.keyframes;
+            window.ThemeProvider = window.styled.ThemeProvider;
+          }
+
+          if (window.ReactRouterDOM) {
+            window.BrowserRouter = window.ReactRouterDOM.BrowserRouter;
+            window.MemoryRouter = window.ReactRouterDOM.MemoryRouter;
+            window.Routes = window.ReactRouterDOM.Routes;
+            window.Route = window.ReactRouterDOM.Route;
+            window.Link = window.ReactRouterDOM.Link;
+            window.useNavigate = window.ReactRouterDOM.useNavigate;
+            window.useLocation = window.ReactRouterDOM.useLocation;
+            window.useParams = window.ReactRouterDOM.useParams;
+          }
+          if (!window.supabase || !window.supabase.createClient) {
+            window.supabase = {
+              createClient: function() {
+                return {
+                  from: function() {
+                    return {
+                      select: function() { return Promise.resolve({ data: [], error: null }); },
+                      insert: function() { return Promise.resolve({ data: [], error: null }); },
+                      update: function() { return Promise.resolve({ data: [], error: null }); },
+                      delete: function() { return Promise.resolve({ data: [], error: null }); },
+                      on: function() { return { subscribe: function() {} }; }
+                    };
+                  }
+                };
+              }
+            };
+          }
+          
+          var compiledCode = '';
+          try {
+            compiledCode = Babel.transform(rawCode, { presets: ['react'] }).code;
+          } catch (compileErr) {
+            showError('Syntax / Compilation Error', compileErr.message);
+            return;
+          }
+
+          var runner = new Function(compiledCode);
+          runner();
+
+          var container = document.getElementById('root');
+          var root = ReactDOM.createRoot(container);
+          var Target = window.DefaultExport;
+
+          if (!Target) {
+            var funcs = Object.keys(window).filter(function(k) {
+              return typeof window[k] === 'function' && /^[A-Z]/.test(k) && k !== 'React' && k !== 'ReactDOM';
+            });
+            if (funcs.length > 0) Target = window[funcs[0]];
+          }
+
+          if (Target) {
+            if (window.ReactRouterDOM) {
+              root.render(React.createElement(window.ReactRouterDOM.MemoryRouter, null, React.createElement(Target)));
+            } else {
+              root.render(React.createElement(Target));
+            }
+          } else {
+            showError('Export Error', 'Component loaded, but no default export or main component was found in this file.\\nMake sure your component includes: export default function ComponentName() { ... }');
+          }
+        } catch (runtimeErr) {
+          showError('Runtime Error', runtimeErr.message + (runtimeErr.stack ? '\\n\\n' + runtimeErr.stack : ''));
         }
-      } catch (runtimeErr) {
-        showError('Runtime Error', runtimeErr.message + (runtimeErr.stack ? '\\n\\n' + runtimeErr.stack : ''));
       }
+
+      executeCode();
     })();
   </script>
 </body>

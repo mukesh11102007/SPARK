@@ -181,14 +181,15 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
   });
 
   // Bundle primary backend file into api/index.js if needed
-  if (hasBackend && !filesMap['api/index.js'] && !filesMap['api/server.js']) {
+  if (hasBackend && !filesMap['api/index.js']) {
     const primaryBackend = backendFiles.find(b => b.filename === 'server.js' || b.filename === 'app.js' || b.filename.includes('index')) || backendFiles[0];
     if (primaryBackend) {
       let serverCode = primaryBackend.code;
-      // Convert app.listen(...) into module export for Vercel Serverless
-      if (!serverCode.includes('export default') && !serverCode.includes('module.exports')) {
-        serverCode = serverCode.replace(/app\.listen\([^)]*\);?/g, '');
-        serverCode += '\n\nexport default app;';
+      serverCode = serverCode.replace(/app\.listen\([^)]*\);?/g, '');
+      if (serverCode.includes('module.exports')) {
+        serverCode += '\nmodule.exports.default = module.exports;';
+      } else if (!serverCode.includes('export default')) {
+        serverCode += '\nmodule.exports = app;\nmodule.exports.default = app;';
       }
       vercelFiles.push({ file: 'api/index.js', data: serverCode });
     }
