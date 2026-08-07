@@ -320,15 +320,29 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     });
   };
 
-  const handleRenameWorkspace = (id, oldTitle) => {
+  const handleRenameWorkspace = async (id, oldTitle) => {
     const newTitle = prompt("Enter new name for workspace:", oldTitle);
     if (!newTitle || newTitle.trim() === '') return;
     
+    const title = newTitle.trim();
     setRecentWorkspaces(prev => {
-      const updated = prev.map(w => w.id === id ? { ...w, title: newTitle.trim() } : w);
+      const updated = prev.map(w => w.id === id ? { ...w, title } : w);
       localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
       return updated;
     });
+
+    try {
+      const token = localStorage.getItem('spark_token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/workspace/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ title })
+        });
+      }
+    } catch (e) {
+      console.error('Failed to sync rename to DB', e);
+    }
   };
 
   const handleDeleteWorkspace = async (id) => {
@@ -467,21 +481,58 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
   };
 
   React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem('spark_recent_workspaces');
-      if (saved) {
-        setRecentWorkspaces(JSON.parse(saved));
+    const fetchWorkspaces = async () => {
+      let saved = [];
+      try {
+        const ls = localStorage.getItem('spark_recent_workspaces');
+        if (ls) saved = JSON.parse(ls);
+      } catch {}
+
+      try {
+        const token = localStorage.getItem('spark_token');
+        if (token) {
+          const res = await fetch(`${API_BASE_URL}/api/workspaces`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const dbWorkspaces = data.map(w => ({
+                id: w.workspaceId,
+                title: w.title,
+                time: w.updatedAt,
+                tags: ['Team', 'React'],
+                iconColor: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
+                iconEmoji: '✨'
+              }));
+              
+              const merged = [...dbWorkspaces];
+              const dbIds = new Set(dbWorkspaces.map(w => w.id));
+              saved.forEach(w => {
+                if (!dbIds.has(w.id)) merged.push(w);
+              });
+              
+              saved = merged.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load workspaces from DB', e);
+      }
+
+      if (saved.length > 0) {
+        setRecentWorkspaces(saved);
+        localStorage.setItem('spark_recent_workspaces', JSON.stringify(saved));
       } else {
-        // Fallback demo data
         setRecentWorkspaces([
           { id: 'ecommerce', title: 'E-Commerce Dashboard', time: '2h ago', tags: ['Team', 'React'], iconColor: 'linear-gradient(135deg, #9C27B0, #4D3DF7)', iconEmoji: '📊' },
           { id: 'chat', title: 'Chat Application', time: '1d ago', tags: ['Team', 'Node.js'], iconColor: 'linear-gradient(135deg, #F59E0B, #D97706)', iconEmoji: '💬' },
           { id: 'portfolio', title: 'Portfolio Website', time: '3d ago', tags: ['Personal', 'Next.js'], iconColor: 'linear-gradient(135deg, #00C48C, #059669)', iconEmoji: '🎨' }
         ]);
       }
-    } catch {
-      setRecentWorkspaces([]);
-    }
+    };
+    
+    fetchWorkspaces();
   }, []);
 
   const renderContent = () => {

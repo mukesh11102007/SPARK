@@ -66,12 +66,14 @@ const User = mongoose.model('User', userSchema);
 
 const workspaceSchema = new mongoose.Schema({
   workspaceId: { type: String, required: true, unique: true },
+  title: { type: String, default: 'spark-app' },
   files: { type: Object, default: {} },
   ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   members: [{
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     role: { type: String, enum: ['owner', 'admin', 'member'], default: 'member' }
   }],
+  updatedAt: { type: Date, default: Date.now },
 });
 const Workspace = mongoose.model('Workspace', workspaceSchema);
 
@@ -150,6 +152,17 @@ app.put('/api/user/profile', auth, async (req, res) => {
   }
 });
 
+app.get('/api/workspaces', auth, async (req, res) => {
+  try {
+    const workspaces = await Workspace.find({ 'members.userId': req.user.id })
+      .select('workspaceId title updatedAt ownerId')
+      .sort({ updatedAt: -1 });
+    res.json(workspaces);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/workspace/:id', auth, async (req, res) => {
   try {
     let workspace = await Workspace.findOne({ workspaceId: req.params.id });
@@ -172,7 +185,7 @@ app.get('/api/workspace/:id', auth, async (req, res) => {
 
 app.post('/api/workspace/:id', auth, async (req, res) => {
   try {
-    const { files } = req.body;
+    const { files, title } = req.body;
     let workspace = await Workspace.findOne({ workspaceId: req.params.id });
     if (!workspace) {
       workspace = new Workspace({ workspaceId: req.params.id, ownerId: req.user.id, members: [{ userId: req.user.id, role: 'owner' }] });
@@ -181,8 +194,12 @@ app.post('/api/workspace/:id', auth, async (req, res) => {
     if (files !== undefined) {
       workspace.files = files;
     }
+    if (title !== undefined) {
+      workspace.title = title;
+    }
+    workspace.updatedAt = Date.now();
     await workspace.save();
-    res.json({ success: true });
+    res.json({ success: true, workspace });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

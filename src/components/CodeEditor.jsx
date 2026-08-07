@@ -1,16 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import Editor, { loader } from '@monaco-editor/react';
-
-// Configure Monaco loader to use reliable CDN fallback
-try {
-  loader.config({
-    paths: {
-      vs: 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.43.0/min/vs'
-    }
-  });
-} catch (e) {
-  console.warn('[CodeEditor] Monaco loader config error:', e);
-}
+import Editor from '@monaco-editor/react';
 
 export const CodeEditor = ({ files = {}, onFilesChange, onSelectFile, theme, activeFile, readOnly = false }) => {
   const safeFiles = files || {};

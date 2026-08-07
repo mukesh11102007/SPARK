@@ -1204,6 +1204,18 @@ function App() {
          const saved = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
          const updated = saved.map(w => w.id === wsId ? { ...w, title: newName } : w);
          localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
+
+         if (workspaceType === 'team') {
+           const token = localStorage.getItem('spark_token');
+           if (token) {
+             fetch(`${API_BASE_URL}/api/workspace/${wsId}`, {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+               body: JSON.stringify({ title: newName })
+             }).catch(e => console.error('Failed to sync title to DB', e));
+             broadcastWorkspaceNameUpdate(newName);
+           }
+         }
        } catch(e) {}
     }
   };
@@ -1314,6 +1326,9 @@ function App() {
           });
           if (res.ok) {
             const data = await res.json();
+            if (data.title) {
+              setTeamProjectName(data.title);
+            }
             if (data.files && Object.keys(data.files).length > 0) {
               setTeamFiles(data.files);
               if (activeWs === 'team') {
