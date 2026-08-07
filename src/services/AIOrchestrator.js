@@ -364,21 +364,44 @@ Remember: Return ONLY the code inside \`\`\`jsx ... \`\`\`.`);
   return { [targetFile]: cleanCode };
 };
 
+const executeWithRoundRobin = async (fn) => {
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY_2;
+    if (apiKey && !apiKey.includes('your_gemini_api_key')) {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const res = await fn({
+        models: {
+          generateContent: async (opts) => {
+            const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+            const result = await model.generateContent(opts.contents);
+            return { text: result.response.text() };
+          }
+        }
+      });
+      return res || { text: '' };
+    }
+  } catch (err) {
+    console.warn('[AIOrchestrator] Round-robin call failed:', err);
+  }
+  return { text: '' };
+};
+
 // ── Review & auto-fix generated code before applying to canvas ────────────────
 export const reviewAndFixCode = async (files, originalPrompt, projectName, dbConfig, targetFilename = null) => {
-  let filename = targetFilename;
-  let code = filename ? files[filename] : null;
+  try {
+    let filename = targetFilename;
+    let code = filename ? files[filename] : null;
 
-  if (!filename || !code) {
-    const firstFile = Object.entries(files)[0];
-    if (!firstFile) return { files, review: null };
-    filename = firstFile[0];
-    code = firstFile[1];
-  }
+    if (!filename || !code) {
+      const firstFile = Object.entries(files)[0];
+      if (!firstFile) return { files, review: null };
+      filename = firstFile[0];
+      code = firstFile[1];
+    }
 
-  const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
-    model: 'gemini-2.5-flash',
-    contents: `You are a senior React code reviewer and fixer.
+    const resp = await executeWithRoundRobin(ai => ai.models.generateContent({
+      model: 'gemini-1.5-flash',
+      contents: `You are a senior React code reviewer and fixer.
 
 Original user request: "${originalPrompt}"
 Project name: "${projectName}"
@@ -400,29 +423,32 @@ Your job:
 7. CRITICAL: If the code uses a simulated backend, localStorage, or alert() popups to simulate saving data, you MUST completely rewrite those parts to use the Supabase real-time database exactly as instructed above!
 8. AESTHETICS: Ensure the code produces an extremely premium, stunning, and modern UI. If the styling looks too basic, enhance it with gradients, shadows, and better spacing using inline styles.
 9. Fix ALL problems and return corrected code.
-9. Return a JSON object in this EXACT format:
+10. Return a JSON object in this EXACT format:
 {
   "status": "ok" | "fixed",
   "issues": ["list of issues found, or empty array"],
   "code": "THE COMPLETE FIXED JSX CODE HERE (no markdown, no backticks)"
 }`,
-  }));
+    }));
 
-  try {
-    const text = (resp.text || '').replace(/```json/gi, '').replace(/```/g, '').trim();
-    const result = JSON.parse(text);
-    const fixedCode = (result.code || code).replace(/```jsx?/gi, '').replace(/```/g, '').trim();
-    return {
-      files: { ...files, [filename]: fixedCode },
-      review: {
-        status: result.status || 'ok',
-        issues: result.issues || [],
-      },
-    };
-  } catch {
-    // If JSON parse fails, return original code with no review
-    return { files, review: null };
+    if (resp && resp.text) {
+      const text = resp.text.replace(/```json/gi, '').replace(/```/g, '').trim();
+      const result = JSON.parse(text);
+      if (result && result.code && result.code.includes('function') && result.code.includes('return')) {
+        const fixedCode = result.code.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+        return {
+          files: { ...files, [filename]: fixedCode },
+          review: {
+            status: result.status || 'ok',
+            issues: result.issues || [],
+          },
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[AIOrchestrator] Review & fix skipped:', err);
   }
+  return { files, review: null };
 };
 
 // ── Auto-Heal: Fix code based on error logs ───────────────────────────────────
