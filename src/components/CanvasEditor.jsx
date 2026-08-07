@@ -189,7 +189,7 @@ const CustomNode = ({ data, id, selected }) => {
 
 const nodeTypes = { customNode: CustomNode };
 
-export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', onFileDelete, onFileUpdate, isActive = true, readOnly = false }) => {
+export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', onFileDelete, onFileUpdate, onFileSelect, isActive = true, readOnly = false }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [editingFile, setEditingFile] = useState(null);
@@ -233,8 +233,12 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
     ...base,
     onDelete: handleDeleteNode,
     onRename: handleRenameNode,
-    onEdit: handleEditCode
-  }), [handleDeleteNode, handleRenameNode, handleEditCode]);
+    onEdit: (id, label, code) => {
+      if (onFileSelect) onFileSelect(label);
+      handleEditCode(id, label, code);
+    },
+    onSelect: onFileSelect
+  }), [handleDeleteNode, handleRenameNode, handleEditCode, onFileSelect]);
 
   // Supabase realtime canvas sync
   useEffect(() => {
@@ -439,6 +443,9 @@ export const CanvasEditor = ({ newGeneratedFiles, manualFile, theme = 'light', o
           broadcastCanvasUpdate(nodes, remainingEdges);
         }}
         onConnect={onConnect}
+        onNodeClick={(_, node) => {
+          if (node.data?.label && onFileSelect) onFileSelect(node.data.label);
+        }}
         onNodeDragStop={(_, __, allNodes) => !readOnly && broadcastCanvasUpdate(allNodes, edges)}
         nodeTypes={nodeTypes}
         nodesDraggable={!readOnly}

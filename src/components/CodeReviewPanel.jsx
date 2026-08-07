@@ -55,12 +55,15 @@ export const CodeReviewPanel = ({ pendingFiles, originalPrompt, projectName, onA
       )}
 
       {/* File tabs */}
-      {files.length > 1 && (
+      {files.length > 0 && (
         <div style={{ display: 'flex', gap: '2px', padding: '4px 8px', background: '#161b22', borderBottom: '1px solid #30363d', flexShrink: 0, overflowX: 'auto' }}>
           {files.map(f => (
             <button
               key={f}
-              onClick={() => setActiveFile(f)}
+              onClick={() => {
+                setActiveFile(f);
+                if (onFileSelect) onFileSelect(f);
+              }}
               style={{ padding: '2px 10px', borderRadius: '4px', background: activeFile === f ? '#1f6feb' : 'transparent', border: 'none', color: activeFile === f ? '#fff' : '#8b949e', fontSize: '0.72rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
             >
               {f}

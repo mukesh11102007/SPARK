@@ -1919,7 +1919,17 @@ function App() {
                 </div>
               ) : (
                 <div style={{ flex: 1 }}>
-                  <CanvasEditor newGeneratedFiles={generatedFiles} manualFile={manualFile} theme={theme} onFileDelete={handleDeleteFile} readOnly={isReadOnly} />
+                  <CanvasEditor 
+                    newGeneratedFiles={generatedFiles} 
+                    manualFile={manualFile} 
+                    theme={theme} 
+                    onFileDelete={handleDeleteFile} 
+                    onFileSelect={(filename) => {
+                      setSelectedFile(filename);
+                      setActiveSourceFile(filename);
+                    }}
+                    readOnly={isReadOnly} 
+                  />
                 </div>
               )}
             </div>
@@ -1944,6 +1954,10 @@ function App() {
                       projectName={pendingReview.projectName}
                       reviewResult={pendingReview.reviewResult}
                       isReviewing={isReviewing}
+                      onFileSelect={(filename) => {
+                        setSelectedFile(filename);
+                        setActiveSourceFile(filename);
+                      }}
                       onApply={handleApplyToCanvas}
                       onDiscard={() => setPendingReview(null)}
                     />

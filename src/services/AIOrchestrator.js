@@ -485,7 +485,9 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
 // ── Refine existing code via Gemini ──────────────────────────────────────────
 export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null, workspaceFiles = null, stylingPref = 'styled-components') => {
   const targetFile = filename || 'App.jsx';
-  console.log('[AIOrchestrator] Refining code with Gemini for target file:', targetFile);
+  const isHtmlTarget = targetFile.endsWith('.html') || (existingCode && (existingCode.includes('<!DOCTYPE html>') || existingCode.includes('<html')));
+
+  console.log('[AIOrchestrator] Refining code for:', { targetFile, isHtmlTarget });
   
   let workspaceContext = '';
   if (workspaceFiles && Object.keys(workspaceFiles).length > 1) {
@@ -498,23 +500,24 @@ export const refineAppCode = async (existingCode, problemStatement, projectName,
   }
 
   const raw = await executeWithFallback(problemStatement, `You are an expert React developer.
-The user wants to improve and enhance an existing React component named "${targetFile}".
+${isHtmlTarget ? 'The user wants to CONVERT an HTML document into a fully functional React JSX component.' : `The user wants to improve and enhance an existing React component named "${targetFile}".`}
 
 CRITICAL RULES — MUST FOLLOW:
-1. Return ONLY the updated raw JSX/React code for "${targetFile}". No markdown explanations, no conversational text, no preambles.
+1. ${isHtmlTarget ? 'CONVERT THE HTML INTO CLEAN REACT JSX: Convert class="..." to className="...", inline styles to style={{...}}, close all self-closing tags (<img />, <input />, <br />, <hr />), and convert inline JS scripts into React useState/useEffect hooks.' : `Return ONLY the updated raw JSX/React code for "${targetFile}". No markdown explanations, no conversational text, no preambles.`}
 2. Wrap your code inside a single \`\`\`jsx ... \`\`\` block.
 3. Imports: import React, { useState, useEffect, useRef } from 'react'; ${stylingPref === 'styled-components' ? "and import styled from 'styled-components';" : ""}
 4. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
 5. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes).
 ${getStylingPrompt(stylingPref)}
-6. COMPLETENESS: Return the ENTIRE file content for ${targetFile}. No omissions, no "..." placeholders.
-7. PREMIUM DESIGN: Retain and enhance any premium design aesthetics.
+6. COMPLETENESS: Return the ENTIRE file content. No omissions, no "..." placeholders.
+7. Must export default component: export default function ComponentName() { ... }
 
 Project name: ${projectName}
+Target file: ${targetFile}
 Enhancement Request: ${problemStatement}
 
 Current Code for ${targetFile}:
-\`\`\`jsx
+\`\`\`${isHtmlTarget ? 'html' : 'jsx'}
 ${existingCode}
 \`\`\`
 ${workspaceContext}
@@ -556,7 +559,8 @@ Remember: Return ONLY the code inside \`\`\`jsx ... \`\`\`.`);
     throw new Error("AI service returned invalid response. Please try clicking Enhance again.");
   }
 
-  return { [targetFile]: cleanCode };
+  const outFileName = isHtmlTarget ? targetFile.replace(/\.html$/, '.jsx') : targetFile;
+  return { [outFileName]: cleanCode };
 };
 
 const executeWithRoundRobin = async (fn) => {
