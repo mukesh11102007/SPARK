@@ -158,20 +158,28 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
     (function() {
       var rootEl = document.getElementById('root');
       function showError(title, msg) {
+        if (!rootEl) rootEl = document.getElementById('root');
         rootEl.innerHTML = '<div style="color:#f87171;background:#1e1b4b;border:1px solid #6366f1;padding:1.5rem;margin:1.5rem;border-radius:12px;font-family:monospace;font-size:13px;white-space:pre-wrap;">' +
           '<strong style="font-size:14px;color:#818cf8;display:block;margin-bottom:8px;">⚠️ ' + title + '</strong>' +
           msg.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
       }
 
       var attempts = 0;
+      if (rootEl) {
+        rootEl.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:#0d0d12;color:#a5b4fc;font-family:system-ui,sans-serif;font-size:14px;gap:12px;">' +
+          '<div style="font-size:32px;animation:spin 1s linear infinite;">⚡</div>' +
+          '<div style="font-weight:600;">Building Live Preview...</div>' +
+          '</div>';
+      }
+
       function executeCode() {
         if (typeof Babel === 'undefined' || !Babel.transform) {
           attempts++;
-          if (attempts < 40) {
-            setTimeout(executeCode, 50);
+          if (attempts < 300) {
+            setTimeout(executeCode, 100);
             return;
           }
-          showError('Babel Loading Timeout', 'Babel compiler CDN took too long to load. Retrying preview...');
+          showError('Preview Engine Loading', 'Connecting to preview engine... Please check your internet connection or refresh.');
           return;
         }
 
