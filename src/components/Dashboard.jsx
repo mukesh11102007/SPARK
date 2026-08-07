@@ -9,7 +9,7 @@ const SidebarIcon = ({ path, label, active, onClick }) => (
     padding: '8px 16px',
     borderRadius: '8px',
     cursor: 'pointer',
-    background: active ? 'rgba(255, 255, 255, 0.05)' : 'transparent',
+    background: active ? 'var(--glass-bg)' : 'transparent',
     color: active ? 'var(--text-main)' : 'var(--text-muted)',
     transition: 'all 0.2s',
     fontSize: '0.85rem',
@@ -33,6 +33,18 @@ const SidebarIcon = ({ path, label, active, onClick }) => (
     {label}
   </div>
 );
+
+const timeAgo = (timestamp) => {
+  if (!timestamp) return 'just now';
+  const diff = Date.now() - timestamp;
+  if (diff < 60000) return 'just now';
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+};
 
 const Card = ({ title, subtitle, icon, color, buttonBg, buttonText, onClick }) => (
   <div onClick={onClick} style={{
@@ -79,7 +91,7 @@ const Card = ({ title, subtitle, icon, color, buttonBg, buttonText, onClick }) =
       <div style={{ marginTop: 'auto' }}>
         <button style={{
           background: buttonBg || color,
-          color: 'var(--text-main)',
+          color: '#fff',
           border: 'none',
           padding: '6px 14px',
           borderRadius: '6px',
@@ -171,7 +183,7 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
               <div 
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onRename(id, title); }}
                 style={{ padding: '8px 12px', fontSize: '0.8rem', color: 'var(--text-main)' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 ✏️ Rename
@@ -179,7 +191,7 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
               <div 
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(id); }}
                 style={{ padding: '8px 12px', fontSize: '0.8rem', color: '#ff6b6b' }}
-                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
                 🗑️ Delete
@@ -191,7 +203,7 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
       <div style={{ display: 'flex', gap: '8px' }}>
         {tags.map(t => (
           <span key={t} style={{ 
-            background: 'rgba(255,255,255,0.06)', 
+            background: 'var(--glass-bg)', 
             padding: '4px 10px', 
             borderRadius: '4px', 
             fontSize: '0.65rem',
@@ -513,7 +525,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   key={ws.id}
                   id={ws.id}
                   title={ws.title} 
-                  time={ws.time || 'just now'} 
+                  time={ws.timestamp ? timeAgo(ws.timestamp) : (ws.time || 'just now')} 
                   tags={ws.tags || []} 
                   iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
                   iconEmoji={ws.iconEmoji || '💻'}
@@ -548,7 +560,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                 <div style={{ marginBottom: '32px' }}>
                   <h3 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '12px', fontWeight: 500 }}>Technologies</h3>
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <span style={{ fontSize: '0.75rem', background: 'rgba(255,255,255,0.05)', padding: '4px 12px', borderRadius: '16px', color: 'var(--text-main)' }}>{selectedTemplate.tech}</span>
+                    <span style={{ fontSize: '0.75rem', background: 'var(--glass-bg)', padding: '4px 12px', borderRadius: '16px', color: 'var(--text-main)' }}>{selectedTemplate.tech}</span>
                   </div>
                 </div>
                 <button className="ide-btn" onClick={() => onOpenWorkspace('new', { template: selectedTemplate.title })} style={{ width: '100%', padding: '12px', fontSize: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
@@ -592,7 +604,8 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               { title: 'Admin Dashboard', desc: 'Modern admin dashboard with analytics', icon: '📊', tech: 'Next.js', category: 'Dashboards' },
               { title: 'Blog Platform', desc: 'Full featured blog platform with markdown', icon: '✍️', tech: 'MERN Stack', category: 'Web Apps' },
               { title: 'E-Commerce Store', desc: 'Online store with cart and payment integration', icon: '🛍️', tech: 'Next.js', category: 'Web Apps' },
-              { title: 'Portfolio Template', desc: 'Personal portfolio template for developers', icon: '👨‍💻', tech: 'React', category: 'Other' }
+              { title: 'Portfolio Template', desc: 'Personal portfolio template for developers', icon: '👨‍💻', tech: 'React', category: 'Other' },
+              { title: 'Visual Prototyping Canvas', desc: 'Visual prototyping canvas engine', icon: '🎨', tech: 'React', category: 'Other' }
             ];
 
             const filteredTemplates = allTemplates.filter(t => {
@@ -616,7 +629,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                      <div style={{ flex: 1 }}>
                        <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: 'var(--text-main)' }}>{t.title}</h3>
                        <p style={{ margin: '0 0 12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.desc}</p>
-                       <span style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', padding: '2px 8px', borderRadius: '4px' }}>{t.tech}</span>
+                       <span style={{ fontSize: '0.65rem', background: 'var(--glass-bg)', padding: '2px 8px', borderRadius: '4px' }}>{t.tech}</span>
                      </div>
                   </div>
                 ))}
@@ -665,7 +678,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>{ws.title.toLowerCase().replace(/\s+/g, '-')}</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{ws.time || 'just now'}</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{ws.timestamp ? timeAgo(ws.timestamp) : (ws.time || 'just now')}</span>
                   <span style={{ fontSize: '0.7rem', padding: '4px 12px', background: `rgba(34,197,94,0.1)`, color: '#22c55e', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', justifyContent: 'center' }}>
                     <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div> Live
                   </span>
@@ -771,7 +784,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                         <div>
                           <div style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500, marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                             {m.name} 
-                            {isYou && <span style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>You</span>}
+                            {isYou && <span style={{ fontSize: '0.7rem', background: 'var(--glass-bg)', padding: '2px 6px', borderRadius: '4px' }}>You</span>}
                             {isOwnerUser && <span style={{ fontSize: '0.65rem', background: 'rgba(77,61,247,0.2)', color: '#818cf8', border: '1px solid rgba(77,61,247,0.4)', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>Owner (Link Creator)</span>}
                           </div>
                           <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.email || 'Online'}</div>
@@ -803,7 +816,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                             <option value="Admin">⚡ Admin (Full control)</option>
                           </select>
                         ) : (
-                          <span style={{ fontSize: '0.8rem', color: currentRole === 'Viewer' ? '#f59e0b' : '#10b981', fontWeight: 600, background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '6px' }}>
+                          <span style={{ fontSize: '0.8rem', color: currentRole === 'Viewer' ? '#f59e0b' : '#10b981', fontWeight: 600, background: 'var(--glass-bg)', padding: '6px 14px', borderRadius: '6px' }}>
                             {currentRole === 'Viewer' ? '👁️ Viewer (Read only)' : '✏️ Editor (Can edit code)'}
                           </span>
                         )}
@@ -884,7 +897,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', padding: '0 24px', marginBottom: '16px' }}>Settings</h2>
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               {['Profile', 'Account', 'Preferences', 'Appearance'].map((item) => (
-                <div key={item} onClick={() => setSettingsTab(item)} style={{ padding: '10px 24px', fontSize: '0.85rem', color: settingsTab===item?'var(--text-main)':'var(--text-muted)', background: settingsTab===item?'rgba(255,255,255,0.05)':'transparent', cursor: 'pointer', borderRight: settingsTab===item?'2px solid var(--text-main)':'2px solid transparent' }}>
+                <div key={item} onClick={() => setSettingsTab(item)} style={{ padding: '10px 24px', fontSize: '0.85rem', color: settingsTab===item?'var(--text-main)':'var(--text-muted)', background: settingsTab===item?'var(--glass-bg)':'transparent', cursor: 'pointer', borderRight: settingsTab===item?'2px solid var(--text-main)':'2px solid transparent' }}>
                   {item}
                 </div>
               ))}
@@ -960,7 +973,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                 <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Theme</h3>
                 <div style={{ display: 'flex', gap: '16px' }}>
                   <div onClick={() => setTheme && setTheme('antigravity')} style={{ flex: 1, padding: '16px', background: 'var(--panel-bg)', border: `2px solid ${theme === 'antigravity' ? 'var(--accent)' : 'var(--panel-border)'}`, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}>
-                    <div style={{ width: '100%', height: '60px', background: '#000', borderRadius: '4px', marginBottom: '12px', border: '1px solid rgba(255,255,255,0.1)' }}></div>
+                    <div style={{ width: '100%', height: '60px', background: '#000', borderRadius: '4px', marginBottom: '12px', border: '1px solid var(--panel-border)' }}></div>
                     <span style={{ fontSize: '0.85rem', color: 'var(--text-main)', fontWeight: 500 }}>Dark Mode</span>
                   </div>
                   <div onClick={() => setTheme && setTheme('light')} style={{ flex: 1, padding: '16px', background: 'var(--panel-bg)', border: `2px solid ${theme === 'light' ? 'var(--accent)' : 'var(--panel-border)'}`, borderRadius: '8px', cursor: 'pointer', textAlign: 'center' }}>
@@ -1085,12 +1098,12 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '800px', margin: '0 auto' }}>
                 
                 <div style={{ background: '#4D3DF7', padding: '24px', borderRadius: '8px', color: '#fff', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '16px', height: '16px', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '2px' }}></div>
+                  <div style={{ width: '16px', height: '16px', border: '1px solid var(--panel-border)', borderRadius: '2px' }}></div>
                   Navbar
                 </div>
                 
                 <div style={{ background: '#2563EB', padding: '60px 24px', borderRadius: '8px', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-                  <div style={{ width: '16px', height: '16px', border: '1px solid rgba(255,255,255,0.5)', borderRadius: '2px' }}></div>
+                  <div style={{ width: '16px', height: '16px', border: '1px solid var(--panel-border)', borderRadius: '2px' }}></div>
                   Hero Section
                 </div>
                 
@@ -1190,7 +1203,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                       key={ws.id}
                       id={ws.id}
                       title={ws.title} 
-                      time={ws.time || 'just now'} 
+                      time={ws.timestamp ? timeAgo(ws.timestamp) : (ws.time || 'just now')} 
                       tags={ws.tags || []} 
                       iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
                       iconEmoji={ws.iconEmoji || '💻'}
@@ -1337,8 +1350,8 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 60px 12px' }}>
           <div style={{ position: 'relative', width: '320px' }}>
             <svg style={{ position: 'absolute', left: 12, top: 9, color: 'var(--text-muted)' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search workspaces..." style={{ width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--panel-border)', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none' }} />
-            <div style={{ position: 'absolute', right: 12, top: 8, fontSize: '0.65rem', color: 'var(--text-muted)', border: '1px solid var(--panel-border)', padding: '2px 6px', borderRadius: '4px', background: 'rgba(255,255,255,0.02)' }}>⌘K</div>
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search workspaces..." style={{ width: '100%', background: 'var(--glass-bg)', border: '1px solid var(--panel-border)', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none' }} />
+            <div style={{ position: 'absolute', right: 12, top: 8, fontSize: '0.65rem', color: 'var(--text-muted)', border: '1px solid var(--panel-border)', padding: '2px 6px', borderRadius: '4px', background: 'var(--glass-bg)' }}>⌘K</div>
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>

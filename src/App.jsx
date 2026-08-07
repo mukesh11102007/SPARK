@@ -82,7 +82,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
           onClick={() => onAddFile('NewComponent.jsx')} 
           style={{
             cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center', 
-            alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.1)', 
+            alignItems: 'center', gap: '6px', background: 'var(--glass-bg)', 
             color: 'var(--text-primary)', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: 'none'
           }} title="Create new file">
           <span style={{ fontSize: '14px' }}>➕</span> New
@@ -382,7 +382,7 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
                     <option value="owner">Owner</option>
                   </select>
                 ) : (
-                  <div style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px', textTransform: 'capitalize' }}>
+                  <div style={{ fontSize: '0.7rem', background: 'var(--glass-bg)', padding: '2px 6px', borderRadius: '4px', textTransform: 'capitalize' }}>
                     {m.role}
                   </div>
                 )}
@@ -970,7 +970,7 @@ function App() {
         filtered.unshift({
           id: wsId,
           title: `Workspace ${wsId.substring(0, 8)}`,
-          time: 'Just now',
+          timestamp: Date.now(),
           tags: ['Team', 'React'],
           iconColor: 'linear-gradient(135deg, #4D3DF7, #8A2BE2)',
           iconEmoji: '✨'
@@ -1479,25 +1479,28 @@ function App() {
             const promptTitle = options.initialPrompt.length > 25 ? options.initialPrompt.substring(0, 25) + '...' : options.initialPrompt;
             setPersonalProjectName(promptTitle);
             setWorkspaceType('personal');
+            localStorage.setItem('spark_workspace_type', 'personal');
             setActiveActivity('preview');
             // Trigger AI generation immediately
             generateAppFromVoice(options.initialPrompt, promptTitle, dbConfig).then(code => {
               setGeneratedFiles(code);
-              setPersonalFiles(code);
+              updatePersonalFiles(code);
               broadcastFiles(code);
             }).catch(err => console.error('AI Generation error:', err));
           } else if (options.template) {
             setPersonalProjectName(options.template);
             setWorkspaceType('personal');
+            localStorage.setItem('spark_workspace_type', 'personal');
             const templateFiles = getTemplateCode(options.template);
             setGeneratedFiles(templateFiles);
-            setPersonalFiles(templateFiles);
+            updatePersonalFiles(templateFiles);
           } else {
             setGeneratedFiles({});
-            setPersonalFiles({});
+            updatePersonalFiles({});
             setTeamFiles(null);
             setPersonalProjectName('New Project');
             setWorkspaceType('personal');
+            localStorage.setItem('spark_workspace_type', 'personal');
           }
           if (options.tab) setActiveTab(options.tab);
           if (options.activity) setActiveActivity(options.activity);
@@ -1802,7 +1805,7 @@ function App() {
           {notifications.map((n) => (
             <div key={n.id} style={{
               background: n.type === 'success' ? '#10B981' : 'var(--panel-elevated)',
-              color: '#fff', padding: '12px 20px', borderRadius: '8px',
+              color: n.type === 'success' ? '#fff' : 'var(--text-main)', padding: '12px 20px', borderRadius: '8px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)', fontSize: '0.9rem', fontWeight: 500,
               display: 'flex', alignItems: 'center', gap: '10px',
               border: n.type === 'success' ? '1px solid #059669' : '1px solid var(--panel-border)',
