@@ -997,7 +997,8 @@ const getStylingPrompt = (preference) => {
 
 // ── Supabase Prompt Helper ───────────────────────────────────────────────────
 const getDbPrompt = (dbConfig, prompt = '') => {
-  const needsDb = prompt.toLowerCase().match(/login|signup|auth|database|db|store|save|history|cart/);
+  const safePrompt = (typeof prompt === 'string' ? prompt : String(prompt || ''));
+  const needsDb = safePrompt.toLowerCase().match(/login|signup|auth|database|db|store|save|history|cart/);
   
   if (dbConfig && dbConfig.status === 'active') {
     return `
@@ -1031,11 +1032,11 @@ Since they might be a non-technical user, you MUST inject a functional Supabase 
   \`const supabase = window.supabase.createClient('${defaultUrl}', '${defaultKey}');\`
 - The ONLY table available is \`app_data\`. The ONLY columns are \`id\`, \`created_at\`, \`app_name\` (text), and \`payload\` (JSONB).
 - CRITICAL MULTI-TENANCY RULE: You CANNOT insert custom columns (no price, name, etc.). You MUST wrap all custom data inside the JSONB \`payload\` column.
-- You MUST pass \`app_name: 'App_${prompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}'\` in EVERY insert to prevent data leakage between different generated apps!
+- You MUST pass \`app_name: 'App_${safePrompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}'\` in EVERY insert to prevent data leakage between different generated apps!
 - Example Insert:
-  \`await supabase.from('app_data').insert([{ app_name: 'App_${prompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}', payload: { type: 'item', field1: 'value' } }]);\`
+  \`await supabase.from('app_data').insert([{ app_name: 'App_${safePrompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}', payload: { type: 'item', field1: 'value' } }]);\`
 - Example Fetch:
-  \`const { data } = await supabase.from('app_data').select('*').eq('app_name', 'App_${prompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}');\`
+  \`const { data } = await supabase.from('app_data').select('*').eq('app_name', 'App_${safePrompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}');\`
 - For login/signup pages, use \`supabase.auth.signInWithPassword({ email, password })\` and \`supabase.auth.signUp({ email, password })\`.
 - Ensure the frontend fully implements the necessary state and UI for these database interactions.
 `;
