@@ -342,6 +342,16 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       console.error("Failed to delete workspace on backend", e);
     }
 
+    try {
+      const deletedList = JSON.parse(localStorage.getItem('spark_deleted_workspaces') || '[]');
+      if (!deletedList.includes(id)) {
+        deletedList.push(id);
+        localStorage.setItem('spark_deleted_workspaces', JSON.stringify(deletedList));
+      }
+      localStorage.removeItem(`spark_personal_files_${id}`);
+      localStorage.removeItem(`deployUrl_${id}`);
+    } catch (e) {}
+
     setRecentWorkspaces(prev => {
       const updated = prev.filter(w => w.id !== id);
       localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));

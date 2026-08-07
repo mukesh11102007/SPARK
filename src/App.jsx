@@ -294,25 +294,35 @@ const ActionsPanel = ({ onSimulateCrash }) => {
   };
 
   const handleDeleteWorkspace = async () => {
-    if (!window.confirm("Are you sure you want to completely delete this workspace? This cannot be undone.")) return;
-    const token = localStorage.getItem('spark_token');
-    const wsId = localStorage.getItem('spark_workspace_id');
-    if (!token || !wsId) return;
+    const wsId = getOrCreateWorkspaceId();
+    if (!confirm("Are you sure you want to delete this workspace? This cannot be undone.")) return;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/workspace/${wsId}`, {
-        method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      if (res.ok) {
-        localStorage.removeItem('spark_workspace_id');
-        window.location.href = '/';
-      } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to delete workspace');
+      const token = localStorage.getItem('spark_token');
+      if (token) {
+        await fetch(`${API_BASE_URL}/api/workspace/${wsId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
       }
-    } catch (e) {
-      alert('Error deleting workspace: ' + e.message);
-    }
+    } catch (e) {}
+
+    try {
+      const deletedList = JSON.parse(localStorage.getItem('spark_deleted_workspaces') || '[]');
+      if (!deletedList.includes(wsId)) {
+        deletedList.push(wsId);
+        localStorage.setItem('spark_deleted_workspaces', JSON.stringify(deletedList));
+      }
+      const saved = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
+      const updated = saved.filter(w => w.id !== wsId);
+      localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
+      localStorage.removeItem(`spark_personal_files_${wsId}`);
+      localStorage.removeItem(`deployUrl_${wsId}`);
+    } catch (e) {}
+
+    // Clean URL parameter and redirect to dashboard
+    const url = new URL(window.location.href);
+    url.searchParams.delete('workspace');
+    window.location.href = url.pathname;
   };
 
   return (
@@ -1113,6 +1123,19 @@ function App() {
   // Track recent workspaces
   useEffect(() => {
     const wsId = getOrCreateWorkspaceId();
+    const deletedList = JSON.parse(localStorage.getItem('spark_deleted_workspaces') || '[]');
+    
+    // If current workspace was deleted, clean workspace URL param and prevent re-adding
+    if (deletedList.includes(wsId)) {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('workspace')) {
+        url.searchParams.delete('workspace');
+        window.history.replaceState({}, '', url.pathname + url.search);
+        window.location.reload();
+      }
+      return;
+    }
+
     if (wsId) {
       try {
         const saved = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
@@ -1193,49 +1216,58 @@ function App() {
       const activeWs = localStorage.getItem('spark_workspace_type') || 'team';
       try {
         const token = localStorage.getItem('spark_token');
-        if (!token) return;
-        const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.files && Object.keys(data.files).length > 0) {
-            setTeamFiles(data.files);
-            if (activeWs === 'team') {
-              setGeneratedFiles(data.files);
-            }
-            logActivity(`Fetched ${Object.keys(data.files).length} files from Workspace Database.`);
-          } else {
-            // Fallback to Supabase logs for older workspaces
-            fetchWorkspaceFiles(workspaceId).then(supaFiles => {
-              if (supaFiles && Object.keys(supaFiles).length > 0) {
-                setTeamFiles(supaFiles);
-                if (activeWs === 'team') {
-                  setGeneratedFiles(supaFiles);
-                }
-                logActivity(`Migrated ${Object.keys(supaFiles).length} files from Supabase history.`);
-                // Save to MongoDB to complete migration
-                fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                  body: JSON.stringify({ files: supaFiles })
-                });
-              } else {
-                setTeamFiles({});
+        if (token) {
+          const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.files && Object.keys(data.files).length > 0) {
+              setTeamFiles(data.files);
+              if (activeWs === 'team') {
+                setGeneratedFiles(data.files);
               }
-            });
+              logActivity(`Fetched ${Object.keys(data.files).length} files from Workspace Database.`);
+            } else {
+              // Fallback to Supabase logs for older workspaces
+              fetchWorkspaceFiles(workspaceId).then(supaFiles => {
+                if (supaFiles && Object.keys(supaFiles).length > 0) {
+                  setTeamFiles(supaFiles);
+                  if (activeWs === 'team') {
+                    setGeneratedFiles(supaFiles);
+                  }
+                  logActivity(`Migrated ${Object.keys(supaFiles).length} files from Supabase history.`);
+                  fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                    body: JSON.stringify({ files: supaFiles })
+                  });
+                } else {
+                  // Workspace is empty - clear team & generated files!
+                  setTeamFiles({});
+                  if (activeWs === 'team') setGeneratedFiles({});
+                }
+              });
+            }
+          } else {
+            setTeamFiles({});
+            if (activeWs === 'team') setGeneratedFiles({});
           }
+        } else {
+          setTeamFiles({});
+          if (activeWs === 'team') setGeneratedFiles({});
         }
       } catch (err) {
         console.error('Failed to load team files from DB', err);
         setTeamFiles({});
+        if (activeWs === 'team') setGeneratedFiles({});
       }
     };
     loadTeamFiles();
 
-    // Load Personal Files from Local Storage
+    // Load Personal Files scoped per Workspace ID
     const activeWsType = localStorage.getItem('spark_workspace_type') || 'team';
-    const savedPersonal = localStorage.getItem('spark_personal_files');
+    const savedPersonal = localStorage.getItem(`spark_personal_files_${workspaceId}`) || localStorage.getItem('spark_personal_files');
     if (savedPersonal) {
       try {
         const parsed = JSON.parse(savedPersonal);
@@ -1243,10 +1275,14 @@ function App() {
         if (activeWsType === 'personal') {
           setGeneratedFiles(parsed);
         }
-      } catch (e) {}
-    } else if (activeWsType === 'personal') {
+      } catch (e) {
+        setPersonalFiles({});
+      }
+    } else {
       setPersonalFiles({});
-      setGeneratedFiles({});
+      if (activeWsType === 'personal') {
+        setGeneratedFiles({});
+      }
     }
 
     window.__sparkOnRemoteCodeGenerated = (files) => {
@@ -1299,7 +1335,9 @@ function App() {
   const updatePersonalFiles = (files) => {
     const updated = typeof files === 'function' ? files(personalFiles) : files;
     setPersonalFiles(updated || {});
+    const wsId = getOrCreateWorkspaceId();
     try {
+      localStorage.setItem(`spark_personal_files_${wsId}`, JSON.stringify(updated || {}));
       localStorage.setItem('spark_personal_files', JSON.stringify(updated || {}));
     } catch(e) { console.error('Failed saving personal files', e); }
   };
