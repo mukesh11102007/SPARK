@@ -1495,8 +1495,25 @@ function App() {
     const defaultCode = `import React from 'react';\n\nexport default function ${safeName}() {\n  return (\n    <div style={{ padding: '2rem' }}>\n      <h2>${safeName} Component</h2>\n    </div>\n  );\n}\n`;
     setGeneratedFiles(prev => {
       const updated = { ...(prev || {}), [filename]: defaultCode };
-      if (workspaceType === 'personal') updatePersonalFiles(updated);
-      else setTeamFiles(updated);
+      if (workspaceType === 'personal') {
+        updatePersonalFiles(updated);
+      } else {
+        setTeamFiles(updated);
+        const workspaceId = getOrCreateWorkspaceId();
+        try {
+          const token = localStorage.getItem('spark_token');
+          if (token) {
+            fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ files: updated })
+            });
+          }
+          broadcastCodeGenerated(workspaceId, updated);
+        } catch (e) {
+          console.error('Failed to update DB on file add', e);
+        }
+      }
       return updated;
     });
     setManualFile({ name: filename, timestamp: Date.now() });
@@ -1505,8 +1522,25 @@ function App() {
   const handleFileUpload = (filename, content) => {
     setGeneratedFiles(prev => {
       const updated = { ...(prev || {}), [filename]: content };
-      if (workspaceType === 'personal') updatePersonalFiles(updated);
-      else setTeamFiles(updated);
+      if (workspaceType === 'personal') {
+        updatePersonalFiles(updated);
+      } else {
+        setTeamFiles(updated);
+        const workspaceId = getOrCreateWorkspaceId();
+        try {
+          const token = localStorage.getItem('spark_token');
+          if (token) {
+            fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ files: updated })
+            });
+          }
+          broadcastCodeGenerated(workspaceId, updated);
+        } catch (e) {
+          console.error('Failed to update DB on file upload', e);
+        }
+      }
       return updated;
     });
     // Auto-select uploaded file and switch to source editor so user can edit it immediately
