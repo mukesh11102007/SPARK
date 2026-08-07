@@ -1375,3 +1375,38 @@ export const chatWithProject = async (files, userMessage, sessionId = 'default-s
     return await executeWithFallback(prompt, `You are a helpful AI developer assistant embedded in a code editor.\nThe user is asking you a question about their current workspace.\n\nHere are the current files in the workspace:\n${fileContext}`);
   }
 };
+
+export const formatCodeForDeploy = async (filename, code) => {
+  const isBackend = filename.includes('server') || filename.includes('api') || (!filename.includes('.jsx') && code.includes('express'));
+  
+  const systemInstruction = `You are a strict DevOps automation tool preparing code for Vercel Serverless deployment. 
+Your ONLY job is to modify the infrastructure deployment code.
+DO NOT change any styling (Tailwind/CSS), UI layout, or business logic.
+
+If backend file:
+1. Remove app.listen() and any local server starting logic.
+2. Ensure the Express app is exported at the end using: "module.exports = app;" (or whatever the app variable is named).
+3. Do NOT change API routes or database logic.
+
+If frontend file:
+1. Replace hardcoded localhost API URLs (e.g., http://localhost:5000/api) with relative URLs (e.g., /api).
+2. Do NOT change the UI, styling, or component structure.
+
+Return ONLY the raw modified code. Do not include markdown codeblocks (no \`\`\`javascript or \`\`\`). Do not include any explanations.`;
+
+  try {
+    const response = await callDirectGemini(code, systemInstruction);
+    if (response) {
+      // Strip markdown codeblocks if AI accidentally included them
+      let clean = response.trim();
+      if (clean.startsWith('\`\`\`')) {
+        clean = clean.split('\\n').slice(1).join('\\n');
+        if (clean.endsWith('\`\`\`')) clean = clean.slice(0, -3);
+      }
+      return clean.trim() || code;
+    }
+  } catch (err) {
+    console.error('Failed to format code for deploy:', err);
+  }
+  return code; // Fallback to original code if it fails
+};

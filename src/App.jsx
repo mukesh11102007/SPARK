@@ -3,7 +3,7 @@ import { AutomationProvider, useAutomation } from './contexts/AutomationContext'
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CanvasEditor } from './components/CanvasEditor';
 import { bootWebContainer } from './services/WebContainerService';
-import { generateAppFromVoice, refineAppCode, reviewAndFixCode, autoHealCode } from './services/AIOrchestrator';
+import { generateAppFromVoice, refineAppCode, reviewAndFixCode, autoHealCode, formatCodeForDeploy } from './services/AIOrchestrator';
 import { CodeReviewPanel } from './components/CodeReviewPanel';
 import { UserIdentityModal } from './components/UserIdentityModal';
 import {
@@ -1484,6 +1484,41 @@ function App() {
     }
   };
 
+  const handleFormatForDeploy = async () => {
+    if (!activeSourceFile || !generatedFiles[activeSourceFile]) return;
+    
+    // Set reviewing state so UI shows a loading state if we want, or just wait
+    logActivity(`Formatting ${activeSourceFile} for Serverless Deployment...`);
+    setIsReviewing(true);
+    
+    try {
+      const code = generatedFiles[activeSourceFile];
+      const formattedCode = await formatCodeForDeploy(activeSourceFile, code);
+      
+      if (formattedCode && formattedCode !== code) {
+        setGeneratedFiles(prev => {
+          const updated = { ...(prev || {}), [activeSourceFile]: formattedCode };
+          if (workspaceType === 'personal') {
+            updatePersonalFiles(updated);
+          } else {
+            setTeamFiles(updated);
+          }
+          return updated;
+        });
+        logActivity(`Successfully formatted ${activeSourceFile} for SPARK Deploy!`);
+        alert(`Successfully formatted ${activeSourceFile} for Serverless Deployment! Review the code before clicking Deploy.`);
+      } else {
+        logActivity(`${activeSourceFile} is already formatted for SPARK Deploy or no changes needed.`);
+        alert('No formatting changes were needed.');
+      }
+    } catch (err) {
+      console.error('Format for deploy failed', err);
+      alert('Failed to format code for deployment.');
+    } finally {
+      setIsReviewing(false);
+    }
+  };
+
   useEffect(() => { 
     document.body.setAttribute('data-theme', theme); 
     localStorage.setItem('spark_theme', theme);
@@ -1712,13 +1747,24 @@ function App() {
             ))}
           </div>
           {fileKeys.length > 0 && (
-            <button 
-              className="ide-btn" 
-              style={{ marginTop: '15px' }}
-              onClick={() => handleApplyToCanvas(generatedFiles)}
-            >
-              Save & Sync Changes
-            </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '15px' }}>
+              <button 
+                className="ide-btn" 
+                onClick={() => handleApplyToCanvas(generatedFiles)}
+              >
+                Save & Sync Changes
+              </button>
+              {activeSourceFile && (
+                <button 
+                  className="ide-btn ide-btn-secondary" 
+                  onClick={handleFormatForDeploy}
+                  disabled={isReviewing}
+                  style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', fontSize: '0.8rem' }}
+                >
+                  {isReviewing ? 'Formatting...' : '✨ Format for SPARK Deploy (AI)'}
+                </button>
+              )}
+            </div>
           )}
         </div>
       );
