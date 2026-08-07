@@ -1,5 +1,26 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
 const WEBHOOK_URL = 'https://api.agents.snsihub.ai/webhook/Db';
 const FALLBACK_WEBHOOK_URL = import.meta.env.VITE_FALLBACK_WEBHOOK_URL || 'https://api.agents.snsihub.ai/webhook/fallback';
+
+const callDirectGemini = async (prompt, systemInstruction = '') => {
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY_2;
+  if (!apiKey || apiKey.includes('your_gemini_api_key')) return null;
+
+  try {
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      systemInstruction: systemInstruction || undefined
+    });
+    const result = await model.generateContent(prompt);
+    const text = result.response.text();
+    return text || null;
+  } catch (err) {
+    console.warn('[AIOrchestrator] Direct Gemini SDK call failed:', err);
+    return null;
+  }
+};
 
 const executeWithFallback = async (prompt, systemInstruction = '') => {
   try {
@@ -8,19 +29,26 @@ const executeWithFallback = async (prompt, systemInstruction = '') => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ prompt, systemInstruction })
     });
-    if (!response.ok) throw new Error(`Fallback webhook failed: ${response.status}`);
-    const text = await response.text();
-    try {
-      const json = JSON.parse(text);
-      if (json._responseData?.content?.parts?.[0]?.text) return json._responseData.content.parts[0].text;
-      return json.output || json.text || json.reply || json.response || text;
-    } catch {
-      return text;
+    if (response.ok) {
+      const text = await response.text();
+      try {
+        const json = JSON.parse(text);
+        if (json._responseData?.content?.parts?.[0]?.text) return json._responseData.content.parts[0].text;
+        const val = json.output || json.text || json.reply || json.response;
+        if (val && typeof val === 'string') return val;
+      } catch {
+        if (text && !text.includes('"success":true') && !text.includes('"executionId"')) return text;
+      }
     }
   } catch (err) {
-    console.error("[AIOrchestrator] Fatal: Fallback webhook also failed.", err);
-    throw new Error("Both primary and fallback AI services are currently unavailable.");
+    console.warn("[AIOrchestrator] Fallback webhook failed:", err);
   }
+
+  // Fallback to direct Gemini SDK
+  const directText = await callDirectGemini(prompt, systemInstruction);
+  if (directText) return directText;
+
+  throw new Error("AI Service temporary response issue. Please try clicking again.");
 };
 
 // Helper to recursively find JS/JSX code in nested JSON objects
@@ -203,7 +231,11 @@ ${getDbPrompt(dbConfig)}`);
   const files = extractCode(raw, projectName);
   if (files) return files;
 
-  const clean = raw.replace(/\`\`\`jsx?/gi, '').replace(/\`\`\`/g, '').trim();
+  const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+  if (clean.includes('"success":true') || clean.includes('"executionId"') || (!clean.includes('export') && !clean.includes('function') && !clean.includes('return'))) {
+    throw new Error("AI service returned invalid response. Please try again.");
+  }
+
   const match = clean.match(/export\s+default\s+function\s+([a-zA-Z0-9_]+)/);
   let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
   if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
@@ -323,6 +355,10 @@ Remember: Return ONLY the code inside \`\`\`jsx ... \`\`\`.`);
   const lastBraceIndex = cleanCode.lastIndexOf('}');
   if (lastBraceIndex > 0) {
     cleanCode = cleanCode.substring(0, lastBraceIndex + 1);
+  }
+
+  if (cleanCode.includes('"success":true') || cleanCode.includes('"executionId"') || (!cleanCode.includes('export') && !cleanCode.includes('function') && !cleanCode.includes('return'))) {
+    throw new Error("AI service returned invalid response. Please try clicking Enhance again.");
   }
 
   return { [targetFile]: cleanCode };
