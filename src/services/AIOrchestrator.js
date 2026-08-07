@@ -27,7 +27,8 @@ const generateSmartClientCode = (prompt = '', projectName = 'App', existingCode 
   
   let compName = projectName ? projectName.replace(/[^a-zA-Z0-9]/g, '') : '';
   if (!compName || compName.toLowerCase() === 'sparkapp' || compName === 'NewProject') {
-    if (p.includes('todo') || p.includes('task')) compName = 'TaskManager';
+    if (p.includes('calc') || p.includes('calculator') || p.includes('math')) compName = 'CalculatorApp';
+    else if (p.includes('todo') || p.includes('task')) compName = 'TaskManager';
     else if (p.includes('shop') || p.includes('store') || p.includes('cart')) compName = 'EcommerceApp';
     else if (p.includes('dashboard') || p.includes('chart') || p.includes('analytic')) compName = 'AnalyticsDashboard';
     else compName = 'CustomApp';
@@ -51,6 +52,96 @@ const generateSmartClientCode = (prompt = '', projectName = 'App', existingCode 
     return code;
   }
 
+  // Calculator Generator
+  if (p.includes('calc') || p.includes('calculator') || p.includes('math')) {
+    return `import React, { useState } from 'react';
+
+export default function ${compName}() {
+  const [display, setDisplay] = useState('0');
+  const [history, setHistory] = useState([]);
+
+  const handleNum = (num) => {
+    setDisplay(prev => prev === '0' ? String(num) : prev + String(num));
+  };
+
+  const handleOp = (op) => {
+    const lastChar = display.slice(-1);
+    if (['+', '-', '*', '/', '%'].includes(lastChar)) {
+      setDisplay(display.slice(0, -1) + op);
+    } else {
+      setDisplay(display + ' ' + op + ' ');
+    }
+  };
+
+  const handleClear = () => {
+    setDisplay('0');
+  };
+
+  const handleDelete = () => {
+    setDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
+  };
+
+  const handleEqual = () => {
+    try {
+      const cleanExpr = display.replace(/×/g, '*').replace(/÷/g, '/');
+      const res = Function('"use strict"; return (' + cleanExpr + ')')();
+      const formatted = Number.isInteger(res) ? String(res) : res.toFixed(4).replace(/0+$/, '').replace(/\\.$/, '');
+      setHistory(prev => [{ expr: display, res: formatted }, ...prev.slice(0, 7)]);
+      setDisplay(formatted);
+    } catch {
+      setDisplay('Error');
+      setTimeout(() => setDisplay('0'), 1500);
+    }
+  };
+
+  return (
+    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+      <div style={{ maxWidth: '400px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '24px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
+        <h1 style={{ margin: '0 0 16px', fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          🧮 Calculator Pro
+        </h1>
+
+        <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '16px', padding: '20px', marginBottom: '20px', textAlign: 'right' }}>
+          <div style={{ fontSize: '0.85rem', color: '#8b949e', height: '20px', overflow: 'hidden' }}>
+            {history.length > 0 ? history[0].expr + ' = ' + history[0].res : ''}
+          </div>
+          <div style={{ fontSize: '2.4rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '1px', wordBreak: 'break-all' }}>
+            {display}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+          <button onClick={handleClear} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>C</button>
+          <button onClick={handleDelete} style={{ background: '#374151', color: '#f3f4f6', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>⌫</button>
+          <button onClick={() => handleOp('%')} style={{ background: '#374151', color: '#f3f4f6', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>%</button>
+          <button onClick={() => handleOp('/')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>÷</button>
+
+          <button onClick={() => handleNum(7)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>7</button>
+          <button onClick={() => handleNum(8)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>8</button>
+          <button onClick={() => handleNum(9)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>9</button>
+          <button onClick={() => handleOp('*')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>×</button>
+
+          <button onClick={() => handleNum(4)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>4</button>
+          <button onClick={() => handleNum(5)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>5</button>
+          <button onClick={() => handleNum(6)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>6</button>
+          <button onClick={() => handleOp('-')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>-</button>
+
+          <button onClick={() => handleNum(1)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>1</button>
+          <button onClick={() => handleNum(2)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>2</button>
+          <button onClick={() => handleNum(3)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>3</button>
+          <button onClick={() => handleOp('+')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>+</button>
+
+          <button onClick={() => handleNum(0)} style={{ gridColumn: 'span 2', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>0</button>
+          <button onClick={() => handleNum('.')} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>.</button>
+          <button onClick={handleEqual} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>=</button>
+        </div>
+      </div>
+    </div>
+  );
+}`;
+  }
+
+  // Task Manager Generator
   if (p.includes('todo') || p.includes('task')) {
     return `import React, { useState } from 'react';
 
@@ -127,6 +218,7 @@ export default function ${compName}() {
 }`;
   }
 
+  // General App Generator
   return `import React, { useState } from 'react';
 
 export default function ${compName}() {
@@ -152,22 +244,19 @@ export default function ${compName}() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
         <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '14px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#10b981' }}>🚀 Prompt Analysis</h3>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#10b981' }}>🚀 Prompt Request</h3>
           <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Generated based on: "${prompt || 'Custom prompt request'}"
+            "${prompt || 'Custom prompt request'}"
           </p>
         </div>
 
         <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '14px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#6366f1' }}>⚡ Component Features</h3>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#6366f1' }}>⚡ Live Component</h3>
           <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Fully customizable React component with state management and sleek styling.
+            Interactive React component ready for production build and deployment.
           </p>
         </div>
       </div>
-    </div>
-  );
-};     </div>
     </div>
   );
 }`;
