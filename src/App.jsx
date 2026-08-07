@@ -179,9 +179,6 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
       } else {
         const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig, stylingPreference);
         code = { ...(generatedFiles || {}), ...newCode };
-        if (workspaceType === 'personal') {
-          setPersonalProjectName(finalProjectName);
-        }
       }
 
       setStatusMsg(isEnhance ? '✨ Enhancing & reviewing...' : '🔍 Reviewing code before applying...');
