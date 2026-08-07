@@ -212,7 +212,7 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     const primaryBackend = backendFiles.find(b => b.filename === 'server.js' || b.filename === 'app.js' || b.filename.includes('index')) || backendFiles[0];
     if (primaryBackend) {
       let serverCode = primaryBackend.code;
-      serverCode = serverCode.replace(/app\.listen\([^)]*\);?/g, '');
+      serverCode = serverCode.replace(/app\.listen/g, '/* Vercel handles listen */ void');
       if (serverCode.includes('module.exports')) {
         serverCode += '\nmodule.exports.default = module.exports;';
       } else if (!serverCode.includes('export default')) {
