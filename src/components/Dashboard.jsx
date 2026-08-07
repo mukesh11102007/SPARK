@@ -1,5 +1,6 @@
 import React from 'react';
 import { API_BASE_URL } from '../config';
+import { MyAppsPanel } from './MyAppsPanel';
 
 const SidebarIcon = ({ path, label, active, onClick }) => (
   <div onClick={onClick} style={{
@@ -290,6 +291,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
   const [membersTab, setMembersTab] = React.useState('Members');
   const [settingsTab, setSettingsTab] = React.useState('Profile');
   const [selectedTemplate, setSelectedTemplate] = React.useState(null);
+  const [selectedDeployWs, setSelectedDeployWs] = React.useState('');
   const [builderPrompt, setBuilderPrompt] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [workspaceOwnerEmail] = React.useState(() => {
@@ -667,37 +669,31 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
                     Choose an existing project to deploy to Vercel instantly.
                   </div>
-                  <select style={{ width: '100%', maxWidth: '300px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none', marginBottom: '16px', appearance: 'none' }}>
+                  <select value={selectedDeployWs} onChange={(e) => setSelectedDeployWs(e.target.value)} style={{ width: '100%', maxWidth: '300px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none', marginBottom: '16px', appearance: 'none' }}>
                     <option value="">-- Select Workspace --</option>
                     {recentWorkspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.title}</option>)}
                   </select>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <button className="ide-btn" style={{ padding: '8px 24px', margin: 0, width: 'auto' }} onClick={() => alert('Deployment started!')}>Deploy to Vercel</button>
                 </div>
               </div>
             </div>
           </div>
 
-          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '16px' }}>Deployments</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {recentWorkspaces.filter(ws => ws.title.toLowerCase().includes(searchQuery.toLowerCase())).length > 0 ? recentWorkspaces.filter(ws => ws.title.toLowerCase().includes(searchQuery.toLowerCase())).map(ws => (
-              <div key={ws.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', background: 'var(--panel-bg)', borderRadius: '8px', border: '1px solid var(--panel-border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'var(--panel-elevated)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>📦</div>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 500 }}>{ws.title.toLowerCase().replace(/\s+/g, '-')}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{ws.timestamp ? timeAgo(ws.timestamp) : (ws.time || 'just now')}</span>
-                  <span style={{ fontSize: '0.7rem', padding: '4px 12px', background: `rgba(34,197,94,0.1)`, color: '#22c55e', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px', minWidth: '70px', justifyContent: 'center' }}>
-                    <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div> Live
-                  </span>
-                </div>
-              </div>
-            )) : (
-              <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem' }}>No deployments yet. Build something amazing!</div>
-            )}
-          </div>
+          <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '16px' }}>Manage Deployments</h3>
+          
+          {selectedDeployWs ? (
+            <div style={{ background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)', overflow: 'hidden' }}>
+              <MyAppsPanel 
+                workspaceId={selectedDeployWs} 
+                identity={identity}
+                onUpdateApp={(app) => onOpenWorkspace(selectedDeployWs, { title: app.app_name })}
+              />
+            </div>
+          ) : (
+            <div style={{ padding: '40px', textAlign: 'center', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px dashed var(--panel-border)', color: 'var(--text-muted)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '16px' }}>👆</div>
+              <div>Select a workspace above to manage its deployments.</div>
+            </div>
+          )}
         </div>
       );
     }

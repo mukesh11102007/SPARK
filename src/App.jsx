@@ -1838,8 +1838,7 @@ function App() {
   const activities = [
     { id: 'explorer', icon: '📄' },
     { id: 'preview', icon: '👁️' },
-    { id: 'source', icon: '🌿' },
-    { id: 'my-apps', icon: '🚀' },
+    { id: 'source', icon: '🌿' }
   ];
 
   if (!identity) {
@@ -1911,6 +1910,9 @@ function App() {
         } else if (typeof type === 'string') {
           url.searchParams.set('workspace', type);
           window.history.replaceState({}, '', url.toString());
+          
+          setWorkspaceType('team');
+          localStorage.setItem('spark_workspace_type', 'team');
           
           if (options.title) {
             setPersonalProjectName(options.title);
@@ -2125,25 +2127,8 @@ function App() {
             </div>
 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-              {/* Canvas Editor OR Full Preview OR Source Full Screen OR My Apps */}
-              {activeActivity === 'my-apps' ? (
-                <div style={{ flex: 1, overflowY: 'auto', background: '#0b0f19' }}>
-                  <MyAppsPanel
-                    workspaceId={getOrCreateWorkspaceId()}
-                    identity={identity}
-                    onUpdateApp={(app) => {
-                      setUpdateAppTarget(app);
-                      setActiveActivity('explorer');
-                      // Pre-fill AI builder with original prompt
-                      if (app.files_snapshot && Object.keys(app.files_snapshot).length > 0) {
-                        const files = { ...app.files_snapshot };
-                        delete files._prompt;
-                        setGeneratedFiles(files);
-                      }
-                    }}
-                  />
-                </div>
-              ) : activeActivity === 'source' ? (
+              {/* Canvas Editor OR Full Preview OR Source Full Screen */}
+              {activeActivity === 'source' ? (
                 <div style={{ flex: 1, width: '100%', height: '100%' }}>
                   <CodeEditor 
                     files={generatedFiles} 
