@@ -1192,7 +1192,21 @@ function App() {
   
   // Use the appropriate project name based on active workspace
   const appProjectName = workspaceType === 'personal' ? personalProjectName : teamProjectName;
-  const setAppProjectName = workspaceType === 'personal' ? setPersonalProjectName : setTeamProjectName;
+  const setAppProjectName = (newName) => {
+    if (workspaceType === 'personal') {
+      setPersonalProjectName(newName);
+    } else {
+      setTeamProjectName(newName);
+    }
+    const wsId = getOrCreateWorkspaceId();
+    if (wsId) {
+       try {
+         const saved = JSON.parse(localStorage.getItem('spark_recent_workspaces') || '[]');
+         const updated = saved.map(w => w.id === wsId ? { ...w, title: newName } : w);
+         localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
+       } catch(e) {}
+    }
+  };
   
   // ── Database state ─────────────────────────────────────────────────────────
   const [dbStatus, setDbStatus] = useState('idle');
@@ -1364,7 +1378,13 @@ function App() {
     }
 
     window.__sparkOnRemoteCodeGenerated = (files) => {
-      setGeneratedFiles(prev => ({ ...prev, ...files }));
+      setGeneratedFiles(prev => {
+        const updated = { ...prev, ...files };
+        if (activeWsType !== 'personal') {
+          setTeamFiles(updated); // Sync team files state too
+        }
+        return updated;
+      });
       logActivity(`Remote teammate generated: ${Object.keys(files).join(', ')}`);
     };
     
