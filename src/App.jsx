@@ -237,13 +237,13 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         {generatedFiles && Object.keys(generatedFiles).length > 0 && (
           <select
             className="ide-input"
-            value={selectedFile}
+            value={selectedFile || ''}
             onChange={e => setSelectedFile(e.target.value)}
             disabled={busy}
-            style={{ marginBottom: '8px' }}
+            style={{ marginBottom: '8px', background: 'var(--panel-elevated)', color: 'var(--text-main)', border: '1px solid var(--panel-border)' }}
           >
             {Object.keys(generatedFiles).map(f => (
-              <option key={f} value={f}>{f}</option>
+              <option key={f} value={f} style={{ background: 'var(--panel-elevated)', color: 'var(--text-main)' }}>{f}</option>
             ))}
           </select>
         )}
@@ -1564,10 +1564,10 @@ function App() {
                 className="ide-input"
                 value={activeSourceFile || ''}
                 onChange={e => setActiveSourceFile(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px' }}
+                style={{ width: '100%', padding: '8px 12px', background: 'var(--panel-elevated)', color: 'var(--text-main)', border: '1px solid var(--panel-border)' }}
               >
                 {fileKeys.map(f => (
-                  <option key={f} value={f}>{f}</option>
+                  <option key={f} value={f} style={{ background: 'var(--panel-elevated)', color: 'var(--text-main)' }}>{f}</option>
                 ))}
               </select>
             </div>
@@ -1760,10 +1760,10 @@ function App() {
                       setGeneratedFiles(teamFiles || {});
                     }
                   }}
-                  style={{ marginLeft: '10px', height: '24px', padding: '0 8px', width: 'auto', background: 'transparent', border: '1px solid var(--panel-border)', borderRadius: '4px' }}
+                  style={{ marginLeft: '10px', height: '28px', padding: '0 8px', width: 'auto', background: 'var(--panel-elevated)', color: 'var(--text-main)', border: '1px solid var(--panel-border)', borderRadius: '4px' }}
                 >
-                  <option value="personal">Personal Workspace</option>
-                  <option value="team">Team Workspace</option>
+                  <option value="personal" style={{ background: 'var(--panel-elevated)', color: 'var(--text-main)' }}>Personal Workspace</option>
+                  <option value="team" style={{ background: 'var(--panel-elevated)', color: 'var(--text-main)' }}>Team Workspace</option>
                 </select>
                 {workspaceType === 'team' && generatedFiles && Object.keys(generatedFiles).length > 0 && (
                   <button 
