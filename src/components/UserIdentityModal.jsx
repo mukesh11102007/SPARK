@@ -31,17 +31,14 @@ export const UserIdentityModal = ({ onIdentitySet }) => {
         boxShadow: '0 25px 60px rgba(0,0,0,0.6), 0 0 80px rgba(121,192,255,0.1)',
       }}>
         {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '56px', height: '56px', borderRadius: '14px',
-            background: 'linear-gradient(135deg, #6e40c9, #58a6ff)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '28px', margin: '0 auto 14px',
-            boxShadow: '0 8px 24px rgba(110,64,201,0.4)',
-          }}>⚡</div>
-          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 700, color: '#e6edf3', letterSpacing: '-0.5px' }}>
-            Welcome to SPARK Studio
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <img src="/spark-logo.png" alt="SPARK Logo" style={{ width: 64, height: 64, objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} />
+          <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#e6edf3', letterSpacing: '-0.5px' }}>
+            Welcome to SPARK
           </h2>
+          <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#10b981', fontWeight: 600, letterSpacing: '0.05em' }}>
+            DEPLOY • MANAGE • MAINTAIN
+          </p>
           <p style={{ margin: '8px 0 0', fontSize: '0.85rem', color: '#79c0ff', opacity: 0.8 }}>
             Enter your name to join the workspace
           </p>

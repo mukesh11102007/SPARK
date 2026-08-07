@@ -1265,11 +1265,12 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         flexDirection: 'column',
         padding: '24px 0'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '32px', padding: '0 24px' }}>
-          <div style={{ width: 28, height: 28, borderRadius: 6, background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px', padding: '0 24px' }}>
+          <img src="/spark-logo.png" alt="SPARK Logo" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+          <div>
+            <span style={{ fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.3px', color: 'var(--text-main)', display: 'block', lineHeight: 1 }}>SPARK</span>
+            <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', fontWeight: 600, letterSpacing: '0.05em' }}>DEPLOY • MANAGE • MAINTAIN</span>
           </div>
-          <span style={{ fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.3px' }}>Spark Studio</span>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', padding: '0 12px' }}>
