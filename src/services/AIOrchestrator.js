@@ -22,195 +22,152 @@ const callDirectGemini = async (prompt, systemInstruction = '') => {
   }
 };
 
-const generateSmartClientCode = (prompt, projectName, existingCode = null) => {
+const generateSmartClientCode = (prompt = '', projectName = 'App', existingCode = null) => {
   const p = (prompt || '').toLowerCase();
   
   let compName = projectName ? projectName.replace(/[^a-zA-Z0-9]/g, '') : '';
-  if (!compName || compName.toLowerCase() === 'sparkapp') {
-    if (p.includes('food') || p.includes('menu') || p.includes('restaurant')) compName = 'FoodCartApp';
+  if (!compName || compName.toLowerCase() === 'sparkapp' || compName === 'NewProject') {
+    if (p.includes('todo') || p.includes('task')) compName = 'TaskManager';
     else if (p.includes('shop') || p.includes('store') || p.includes('cart')) compName = 'EcommerceApp';
-    else if (p.includes('dashboard') || p.includes('analytics')) compName = 'AnalyticsDashboard';
-    else if (p.includes('todo') || p.includes('task')) compName = 'TaskManager';
-    else compName = 'CustomWebApp';
+    else if (p.includes('dashboard') || p.includes('chart') || p.includes('analytic')) compName = 'AnalyticsDashboard';
+    else compName = 'CustomApp';
   }
 
+  // If enhancing existing code:
   if (existingCode && existingCode.includes('export default')) {
-    let enhanced = existingCode;
-    if (p.includes('cart') && !enhanced.includes('cart')) {
-      enhanced = enhanced.replace(/return\s*\(/, `
-  const [cart, setCart] = useState([]);
-  const addToCart = (item) => setCart([...cart, item]);
-  return (`);
+    let code = existingCode;
+    if ((p.includes('dark') || p.includes('theme')) && !code.includes('isDarkMode')) {
+      code = code.replace(/export default function ([A-Za-z0-9_]+)\(\)\s*\{/, 
+        `export default function $1() {\n  const [isDarkMode, setIsDarkMode] = useState(true);`);
     }
-    return enhanced;
+    if (p.includes('search') && !code.includes('searchTerm')) {
+      code = code.replace(/export default function ([A-Za-z0-9_]+)\(\)\s*\{/, 
+        `export default function $1() {\n  const [searchTerm, setSearchTerm] = useState('');`);
+    }
+    if (p.includes('cart') && !code.includes('cart')) {
+      code = code.replace(/export default function ([A-Za-z0-9_]+)\(\)\s*\{/, 
+        `export default function $1() {\n  const [cart, setCart] = useState([]);`);
+    }
+    return code;
+  }
+
+  if (p.includes('todo') || p.includes('task')) {
+    return `import React, { useState } from 'react';
+
+export default function ${compName}() {
+  const [tasks, setTasks] = useState([
+    { id: 1, text: '${prompt ? 'Task: ' + prompt.slice(0, 30) : 'Design UI Layout'}', completed: false, category: 'Work' },
+    { id: 2, text: 'Review component architecture', completed: true, category: 'Dev' },
+    { id: 3, text: 'Deploy full-stack project', completed: false, category: 'Dev' }
+  ]);
+  const [input, setInput] = useState('');
+  const [filter, setFilter] = useState('all');
+
+  const addTask = (e) => {
+    e.preventDefault();
+    if (!input.trim()) return;
+    setTasks([...tasks, { id: Date.now(), text: input.trim(), completed: false, category: 'General' }]);
+    setInput('');
+  };
+
+  const toggleTask = (id) => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  const filteredTasks = tasks.filter(t => {
+    if (filter === 'active') return !t.completed;
+    if (filter === 'completed') return t.completed;
+    return true;
+  });
+
+  return (
+    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ maxWidth: '640px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
+        <h1 style={{ margin: '0 0 8px', fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          ⚡ ${compName}
+        </h1>
+        <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '24px' }}>${prompt || 'Organize and track your daily tasks.'}</p>
+
+        <form onSubmit={addTask} style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
+          <input 
+            type="text" 
+            placeholder="Add new task..." 
+            value={input} 
+            onChange={e => setInput(e.target.value)} 
+            style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '12px 16px', color: '#fff', outline: 'none' }}
+          />
+          <button type="submit" style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}>
+            + Add Task
+          </button>
+        </form>
+
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          {['all', 'active', 'completed'].map(f => (
+            <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? '#10b981' : '#1f2937', color: filter === f ? '#fff' : '#9ca3af', border: '1px solid #374151', borderRadius: '6px', padding: '6px 14px', textTransform: 'capitalize', cursor: 'pointer', fontWeight: 600 }}>
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {filteredTasks.map(t => (
+            <div key={t.id} onClick={() => toggleTask(t.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1f2937', padding: '14px 18px', borderRadius: '10px', border: '1px solid #374151', cursor: 'pointer' }}>
+              <span style={{ textDecoration: t.completed ? 'line-through' : 'none', color: t.completed ? '#9ca3af' : '#fff' }}>
+                {t.text}
+              </span>
+              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', background: t.completed ? '#065f46' : '#374151', color: t.completed ? '#34d399' : '#9ca3af', fontWeight: 600 }}>
+                {t.completed ? '✓ Done' : 'Pending'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}`;
   }
 
   return `import React, { useState } from 'react';
 
 export default function ${compName}() {
-  const [cart, setCart] = useState([]);
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  const menuItems = [
-    { id: 1, name: 'Rustic Artisan Pizza', category: 'mains', price: 18.99, desc: 'Fresh mozzarella, basil, slow-roasted tomatoes on sourdough crust.', img: '🍕' },
-    { id: 2, name: 'Truffle Mushroom Burger', category: 'mains', price: 16.50, desc: 'Wagyu beef patty, wild mushrooms, truffle aioli, brioche bun.', img: '🍔' },
-    { id: 3, name: 'Fresh Avocado Bowl', category: 'salads', price: 14.25, desc: 'Quinoa, Hass avocado, edamame, citrus vinaigrette.', img: '🥗' },
-    { id: 4, name: 'Matcha Iced Latte', category: 'drinks', price: 6.50, desc: 'Ceremonial grade matcha, oat milk, vanilla bean syrup.', img: '🍵' },
-    { id: 5, name: 'Decadent Lava Cake', category: 'desserts', price: 9.99, desc: 'Warm dark chocolate ganache, Madagascar vanilla gelato.', img: '🍰' },
-    { id: 6, name: 'Crafted Berry Smoothie', category: 'drinks', price: 7.25, desc: 'Organic açai, wild blueberries, almond milk, honey.', img: '🥤' }
-  ];
-
-  const addToCart = (item) => {
-    setCart(prev => {
-      const existing = prev.find(i => i.id === item.id);
-      if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
-      }
-      return [...prev, { ...item, qty: 1 }];
-    });
-  };
-
-  const removeFromCart = (id) => {
-    setCart(prev => prev.filter(i => i.id !== id));
-  };
-
-  const updateQty = (id, delta) => {
-    setCart(prev => prev.map(i => {
-      if (i.id === id) {
-        const newQty = i.qty + delta;
-        return newQty > 0 ? { ...i, qty: newQty } : i;
-      }
-      return i;
-    }));
-  };
-
-  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
-  const tax = subtotal * 0.08;
-  const total = subtotal + tax;
-
-  const filteredItems = menuItems.filter(item => {
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
-
   return (
-    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '24px' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid #1f2937', paddingBottom: '16px' }}>
+    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid #1f2937', paddingBottom: '20px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            🍽️ ${compName}
+            ⚡ ${compName}
           </h1>
-          <p style={{ margin: '4px 0 0', color: '#9ca3af', fontSize: '0.9rem' }}>Freshly prepared gourmet dishes delivered fast.</p>
+          <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: '0.9rem' }}>${prompt || 'Interactive custom application component.'}</p>
         </div>
-        
         <input 
           type="text" 
-          placeholder="Search menu..." 
-          value={searchTerm}
-          onChange={e => setSearchTerm(e.target.value)}
-          style={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none', width: '240px' }}
+          placeholder="Search..." 
+          value={searchTerm} 
+          onChange={e => setSearchTerm(e.target.value)} 
+          style={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none', width: '220px' }} 
         />
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '32px' }}>
-        <div>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
-            {['all', 'mains', 'salads', 'drinks', 'desserts'].map(cat => (
-              <button 
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                style={{
-                  background: selectedCategory === cat ? '#10b981' : '#111827',
-                  color: selectedCategory === cat ? '#ffffff' : '#9ca3af',
-                  border: '1px solid #374151',
-                  borderRadius: '6px',
-                  padding: '8px 16px',
-                  cursor: 'pointer',
-                  fontWeight: 600,
-                  textTransform: 'capitalize',
-                  transition: 'all 0.2s'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
-            {filteredItems.map(item => (
-              <div key={item.id} style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                <div>
-                  <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{item.img}</div>
-                  <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 700 }}>{item.name}</h3>
-                  <p style={{ margin: '0 0 16px', color: '#9ca3af', fontSize: '0.85rem', lineHeight: 1.4 }}>{item.desc}</p>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#10b981' }}>\${item.price.toFixed(2)}</span>
-                  <button 
-                    onClick={() => addToCart(item)}
-                    style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 14px', fontWeight: 600, cursor: 'pointer' }}
-                  >
-                    + Add
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '14px', padding: '24px' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#10b981' }}>🚀 Prompt Analysis</h3>
+          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
+            Generated based on: "${prompt || 'Custom prompt request'}"
+          </p>
         </div>
 
-        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px', height: 'fit-content' }}>
-          <h2 style={{ margin: '0 0 20px', fontSize: '1.3rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            🛒 Billing Cart ({cart.reduce((s, i) => s + i.qty, 0)})
-          </h2>
-
-          {cart.length === 0 ? (
-            <p style={{ color: '#6b7280', fontSize: '0.9rem', textAlign: 'center', padding: '40px 0' }}>Your cart is currently empty.</p>
-          ) : (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '20px', maxHeight: '300px', overflowY: 'auto' }}>
-                {cart.map(item => (
-                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1f2937', paddingBottom: '10px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.name}</div>
-                      <div style={{ color: '#10b981', fontSize: '0.85rem', fontWeight: 700 }}>\${(item.price * item.qty).toFixed(2)}</div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => updateQty(item.id, -1)} style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer' }}>-</button>
-                      <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>{item.qty}</span>
-                      <button onClick={() => updateQty(item.id, 1)} style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer' }}>+</button>
-                      <button onClick={() => removeFromCart(item.id)} style={{ background: 'none', color: '#ef4444', border: 'none', cursor: 'pointer', marginLeft: '6px' }}>✕</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ borderTop: '1px solid #374151', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.9rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af' }}>
-                  <span>Subtotal</span>
-                  <span>\${subtotal.toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#9ca3af' }}>
-                  <span>Tax (8%)</span>
-                  <span>\${tax.toFixed(2)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.1rem', color: '#ffffff', marginTop: '6px', paddingTop: '6px', borderTop: '1px solid #374151' }}>
-                  <span>Total</span>
-                  <span style={{ color: '#10b981' }}>\${total.toFixed(2)}</span>
-                </div>
-              </div>
-
-              <button 
-                onClick={() => alert("Order submitted successfully! Total: $" + total.toFixed(2))}
-                style={{ width: '100%', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px', marginTop: '20px', fontWeight: 700, fontSize: '1rem', cursor: 'pointer' }}
-              >
-                Checkout Now
-              </button>
-            </>
-          )}
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '14px', padding: '24px' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#6366f1' }}>⚡ Component Features</h3>
+          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
+            Fully customizable React component with state management and sleek styling.
+          </p>
         </div>
       </div>
+    </div>
+  );
+};     </div>
     </div>
   );
 }`;

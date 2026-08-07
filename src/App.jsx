@@ -1996,6 +1996,10 @@ function App() {
                   <CodeEditor 
                     files={generatedFiles} 
                     onFilesChange={setGeneratedFiles} 
+                    onSelectFile={(f) => {
+                      setActiveSourceFile(f);
+                      setSelectedFile(f);
+                    }}
                     theme={theme} 
                     activeFile={activeSourceFile}
                     readOnly={isReadOnly}
