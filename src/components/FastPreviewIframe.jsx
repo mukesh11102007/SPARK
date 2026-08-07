@@ -58,15 +58,17 @@ const transformCodeForBrowser = (code) => {
 
   const rawPrepared = prefix + clean + suffix;
 
-  // Step 4: Transpile JSX to browser JS synchronously using local Babel
+  // Step 4: Transpile JSX to browser JS synchronously using local Babel with classic runtime
   let transpiled = '';
   try {
-    transpiled = Babel.transform(rawPrepared, { presets: ['react'] }).code;
+    transpiled = Babel.transform(rawPrepared, { 
+      presets: [['react', { runtime: 'classic' }]] 
+    }).code;
   } catch (err) {
-    // If Babel fails because of a residual import statement, strip imports aggressively and transform again
+    console.warn('[FastPreview] Babel transpile retry warning:', err);
     const stripped = rawPrepared.replace(/import\s+[\s\S]*?from\s+['"][^'"]+['"];?/gi, '').replace(/import\s+['"][^'"]+['"];?/gi, '');
     try {
-      transpiled = Babel.transform(stripped, { presets: ['react'] }).code;
+      transpiled = Babel.transform(stripped, { presets: [['react', { runtime: 'classic' }]] }).code;
     } catch (e) {
       console.warn('[FastPreview] Babel transpile fallback warning:', e);
       transpiled = stripped;
