@@ -119,6 +119,75 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
           onChange={(e) => setNewFile(e.target.value)}
         />
       </form>
+      <button 
+        onClick={() => {
+          onFileUpload('App.jsx', `import React, { useState, useEffect } from 'react';
+
+export default function App() {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [newItem, setNewItem] = useState('');
+  const [status, setStatus] = useState('Checking Express API...');
+
+  useEffect(() => {
+    fetch('/api/todos')
+      .then(res => res.json())
+      .then(data => {
+        setItems(data.items || []);
+        setStatus('⚡ Connected to Express Backend API (/api/todos)');
+        setLoading(false);
+      })
+      .catch(() => {
+        setStatus('⚠️ Full-Stack Serverless Mode (Mock API active)');
+        setItems([
+          { id: 1, text: 'Build React Frontend', completed: true },
+          { id: 2, text: 'Deploy Express Backend API', completed: true },
+          { id: 3, text: 'Test Full-Stack Deployment on Vercel', completed: false }
+        ]);
+        setLoading(false);
+      });
+  }, []);
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    if (!newItem.trim()) return;
+    const item = { id: Date.now(), text: newItem, completed: false };
+    setItems([...items, item]);
+    setNewItem('');
+  };
+
+  return (
+    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ maxWidth: '600px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px' }}>
+        <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#10b981' }}>⚡ Full-Stack Test App</h1>
+        <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>React Frontend + Express Backend API</p>
+        <div style={{ margin: '12px 0', fontSize: '0.75rem', padding: '6px 12px', background: '#1f2937', color: '#10b981', borderRadius: '20px', display: 'inline-block' }}>{status}</div>
+        <form onSubmit={handleAdd} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+          <input type="text" placeholder="Add task..." value={newItem} onChange={e => setNewItem(e.target.value)} style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff' }} />
+          <button type="submit" style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 16px', fontWeight: 700 }}>+ Add</button>
+        </form>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          {items.map(item => (
+            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', background: '#1f2937', padding: '12px 16px', borderRadius: '8px' }}>
+              <span>{item.text}</span>
+              <span style={{ color: item.completed ? '#34d399' : '#9ca3af', fontSize: '0.8rem' }}>{item.completed ? 'Done' : 'Pending'}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}`);
+          onFileUpload('server.js', `const express = require('express');\nconst cors = require('cors');\nconst app = express();\napp.use(cors());\napp.use(express.json());\n\nlet todos = [\n  { id: 1, text: 'Build React Frontend', completed: true },\n  { id: 2, text: 'Deploy Express Backend API', completed: true },\n  { id: 3, text: 'Test Full-Stack Deployment on Vercel', completed: false }\n];\n\napp.get('/api/todos', (req, res) => res.json({ success: true, items: todos }));\napp.post('/api/todos', (req, res) => {\n  const item = { id: Date.now(), text: req.body.text, completed: false };\n  todos.push(item);\n  res.json({ success: true, item });\n});\n\nmodule.exports = app;`);
+          onFileUpload('vercel.json', `{\n  "version": 2,\n  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index.js" }]\n}`);
+        }}
+        style={{
+          marginTop: '10px', width: '100%', background: 'linear-gradient(135deg, #10b981, #059669)',
+          color: '#fff', border: 'none', borderRadius: '6px', padding: '8px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+        }}
+      >
+        🧪 Load Full-Stack Demo App
+      </button>
     </div>
   );
 };
@@ -1934,7 +2003,14 @@ function App() {
                 </div>
               ) : activeActivity === 'preview' ? (
                 <div style={{ flex: 1, height: '100%', background: '#fff' }}>
-                  <FastPreviewIframe generatedFiles={generatedFiles} activePreviewFile={activeSourceFile} />
+                  <FastPreviewIframe 
+                    generatedFiles={generatedFiles} 
+                    activePreviewFile={activeSourceFile} 
+                    onSelectFrontendFile={(f) => {
+                      setActiveSourceFile(f);
+                      setSelectedFile(f);
+                    }} 
+                  />
                 </div>
               ) : (
                 <div style={{ flex: 1 }}>
