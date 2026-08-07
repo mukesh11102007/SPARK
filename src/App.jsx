@@ -18,6 +18,8 @@ import { AuthModal } from './components/AuthModal';
 import { CodeEditor } from './components/CodeEditor';
 import { Dashboard } from './components/Dashboard';
 import { ProjectChatBot } from './components/ProjectChatBot';
+import { MyAppsPanel } from './components/MyAppsPanel';
+import { SparkLite } from './components/SparkLite';
 import { API_BASE_URL } from './config';
 
 // ── Sidebar sub-components ─────────────────────────────────────────────────────
@@ -1151,6 +1153,8 @@ function App() {
   const [wcBooted, setWcBooted] = useState(false);
   const [activeTab, setActiveTab] = useState('ai builder');
   const [activeActivity, setActiveActivity] = useState(() => localStorage.getItem('spark_active_activity') || 'explorer');
+  const [sparkMode, setSparkMode] = useState(() => localStorage.getItem('spark_mode') || 'pro'); // 'pro' | 'simple'
+  const [updateAppTarget, setUpdateAppTarget] = useState(null); // app record from MyAppsPanel for Update flow
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeSourceFile, setActiveSourceFile] = useState(null);
   const [theme, setTheme] = useState(() => localStorage.getItem('spark_theme') || 'antigravity');
@@ -1685,6 +1689,24 @@ function App() {
         </div>
       );
     }
+    if (activeActivity === 'my-apps') {
+      return (
+        <div className="sidebar-section">
+          <h3>MY DEPLOYED APPS</h3>
+          <p style={{ opacity: 0.7, fontSize: '0.78rem', lineHeight: 1.5 }}>
+            🚀 All deployed apps shown in main panel.<br /><br />
+            <strong>Update</strong> — enhance with a new AI prompt.<br />
+            <strong>Re-Deploy</strong> — redeploy with same code.<br />
+            Health is auto-checked every 2 min.
+          </p>
+          <button
+            className="ide-btn"
+            style={{ marginTop: '12px', width: '100%', fontSize: '0.8rem' }}
+            onClick={() => setActiveActivity('explorer')}
+          >← Back to Explorer</button>
+        </div>
+      );
+    }
     return (
       <>
         <FileExplorer onAddFile={handleAddManualFile} onFileUpload={handleFileUpload} />
@@ -1716,7 +1738,8 @@ function App() {
   const activities = [
     { id: 'explorer', icon: '📄' },
     { id: 'preview', icon: '👁️' },
-    { id: 'source', icon: '🌿' }
+    { id: 'source', icon: '🌿' },
+    { id: 'my-apps', icon: '🚀' },
   ];
 
   if (!identity) {
@@ -1804,6 +1827,18 @@ function App() {
 
     return (
       <AutomationProvider>
+        {/* SparkLite Simple Mode — shown when mode is 'simple' */}
+        {sparkMode === 'simple' ? (
+          <SparkLite
+            workspaceId={getOrCreateWorkspaceId()}
+            dbConfig={dbConfig}
+            identity={identity}
+            onSwitchPro={() => {
+              setSparkMode('pro');
+              localStorage.setItem('spark_mode', 'pro');
+            }}
+          />
+        ) : (
         <div className="ide-layout">
 
         {/* Activity Bar */}
@@ -1990,8 +2025,25 @@ function App() {
             </div>
 
             <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-              {/* Canvas Editor OR Full Preview OR Source Full Screen */}
-              {activeActivity === 'source' ? (
+              {/* Canvas Editor OR Full Preview OR Source Full Screen OR My Apps */}
+              {activeActivity === 'my-apps' ? (
+                <div style={{ flex: 1, overflowY: 'auto', background: '#0b0f19' }}>
+                  <MyAppsPanel
+                    workspaceId={getOrCreateWorkspaceId()}
+                    identity={identity}
+                    onUpdateApp={(app) => {
+                      setUpdateAppTarget(app);
+                      setActiveActivity('explorer');
+                      // Pre-fill AI builder with original prompt
+                      if (app.files_snapshot && Object.keys(app.files_snapshot).length > 0) {
+                        const files = { ...app.files_snapshot };
+                        delete files._prompt;
+                        setGeneratedFiles(files);
+                      }
+                    }}
+                  />
+                </div>
+              ) : activeActivity === 'source' ? (
                 <div style={{ flex: 1, width: '100%', height: '100%' }}>
                   <CodeEditor 
                     files={generatedFiles} 
@@ -2104,6 +2156,7 @@ function App() {
           </div>
         </ErrorBoundaryWrapper>
       </div>
+        )}
 
       {/* Real-time Notifications Toast */}
       {notifications.length > 0 && (

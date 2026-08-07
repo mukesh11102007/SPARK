@@ -2,6 +2,33 @@
  * Deploys the generated project as a real static Vercel site.
  * SPARK owns the token — users just click Share and get a real hosted URL.
  */
+import { supabase } from './SupabaseService';
+
+// Save a deployment record to Supabase so MyAppsPanel can list and manage it
+const saveDeploymentRecord = async ({ workspaceId, projectName, deployedUrl, vercelProjectId, prompt, filesSnapshot }) => {
+  try {
+    await supabase.from('deployments').insert([{
+      workspace_id: workspaceId || 'default',
+      app_name: projectName || 'My App',
+      deployed_url: deployedUrl,
+      vercel_project_id: vercelProjectId || null,
+      prompt: prompt || '',
+      files_snapshot: filesSnapshot || {},
+      status: 'online',
+    }]);
+  } catch (e) {
+    console.warn('[DeployService] Could not save deployment record to Supabase:', e);
+  }
+};
+
+// Update deployment status (online/down/redeploying)
+export const updateDeploymentStatus = async (deployedUrl, status) => {
+  try {
+    await supabase.from('deployments').update({ status }).eq('deployed_url', deployedUrl);
+  } catch (e) {
+    console.warn('[DeployService] Could not update deployment status:', e);
+  }
+};
 
 // Transform JSX source into browser-runnable code (shared logic with FastPreviewIframe)
 const transformCodeForBrowser = (code) => {
@@ -348,6 +375,16 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
   
   const finalFrontendUrl = `https://${deployUrl}`;
   const finalBackendUrl = hasBackend ? `https://${deployUrl}/api` : null;
+
+  // Save deployment record for MyAppsPanel to track and manage
+  await saveDeploymentRecord({
+    workspaceId,
+    projectName: baseName,
+    deployedUrl: finalFrontendUrl,
+    vercelProjectId: result.projectId || null,
+    prompt: filesMap._prompt || '',
+    filesSnapshot: filesMap,
+  });
 
   return {
     url: finalFrontendUrl,
