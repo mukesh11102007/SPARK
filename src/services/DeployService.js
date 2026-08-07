@@ -149,10 +149,61 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     .replace(/--+/g, '-')
     .slice(0, 50);
 
-  // Build full Vite project structure instead of standalone HTML
-  const vercelFiles = [];
+  // Detect backend files
+  const backendFiles = [];
+  const frontendFiles = [];
+
   Object.entries(filesMap).forEach(([filename, code]) => {
-    vercelFiles.push({ file: `src/${filename}`, data: code });
+    const isBackend = filename.startsWith('api/') || 
+                      filename.startsWith('backend/') || 
+                      filename.startsWith('server/') ||
+                      ['server.js', 'app.js', 'api.js', 'index.js'].includes(filename) && (code.includes('express') || code.includes('req, res') || code.includes('cors') || code.includes('app.get') || code.includes('app.post'));
+
+    if (isBackend) {
+      backendFiles.push({ filename, code });
+    } else {
+      frontendFiles.push({ filename, code });
+    }
+  });
+
+  const hasBackend = backendFiles.length > 0;
+
+  // Build full Vite + Serverless API project structure
+  const vercelFiles = [];
+
+  // Add frontend files
+  Object.entries(filesMap).forEach(([filename, code]) => {
+    if (filename.startsWith('api/')) {
+      vercelFiles.push({ file: filename, data: code });
+    } else {
+      vercelFiles.push({ file: `src/${filename}`, data: code });
+    }
+  });
+
+  // Bundle primary backend file into api/index.js if needed
+  if (hasBackend && !filesMap['api/index.js'] && !filesMap['api/server.js']) {
+    const primaryBackend = backendFiles.find(b => b.filename === 'server.js' || b.filename === 'app.js' || b.filename.includes('index')) || backendFiles[0];
+    if (primaryBackend) {
+      let serverCode = primaryBackend.code;
+      // Convert app.listen(...) into module export for Vercel Serverless
+      if (!serverCode.includes('export default') && !serverCode.includes('module.exports')) {
+        serverCode = serverCode.replace(/app\.listen\([^)]*\);?/g, '');
+        serverCode += '\n\nexport default app;';
+      }
+      vercelFiles.push({ file: 'api/index.js', data: serverCode });
+    }
+  }
+
+  // Create vercel.json for rewrites and SPA fallback
+  vercelFiles.push({
+    file: 'vercel.json',
+    data: JSON.stringify({
+      version: 2,
+      rewrites: [
+        ...(hasBackend ? [{ source: "/api/(.*)", destination: "/api/index.js" }] : []),
+        { source: "/(.*)", destination: "/index.html" }
+      ]
+    }, null, 2)
   });
 
   const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -213,7 +264,27 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
 
   vercelFiles.push({
     file: 'package.json',
-    data: `{\n  "name": "${cleanName}",\n  "private": true,\n  "version": "0.0.0",\n  "type": "module",\n  "scripts": { "dev": "vite", "build": "vite build" },\n  "dependencies": { "react": "^18.2.0", "react-dom": "^18.2.0", "lucide-react": "^0.263.1", "@supabase/supabase-js": "^2.42.0", "styled-components": "^6.1.13", "@emotion/react": "^11.13.3", "@emotion/styled": "^11.13.0", "react-router-dom": "^6.22.3" },\n  "devDependencies": { "@vitejs/plugin-react": "^4.2.1", "vite": "^5.2.0" }\n}`
+    data: JSON.stringify({
+      name: cleanName,
+      private: true,
+      version: "0.0.0",
+      type: "module",
+      scripts: { "dev": "vite", "build": "vite build" },
+      dependencies: {
+        "react": "^18.2.0",
+        "react-dom": "^18.2.0",
+        "lucide-react": "^0.263.1",
+        "@supabase/supabase-js": "^2.42.0",
+        "styled-components": "^6.1.13",
+        "@emotion/react": "^11.13.3",
+        "@emotion/styled": "^11.13.0",
+        "react-router-dom": "^6.22.3",
+        "express": "^4.19.2",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5"
+      },
+      devDependencies: { "@vitejs/plugin-react": "^4.2.1", "vite": "^5.2.0" }
+    }, null, 2)
   });
 
   vercelFiles.push({
@@ -273,5 +344,14 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
 
   const deployUrl = result.url;
   if (!deployUrl) throw new Error('Deployment created but no URL returned.');
-  return `https://${deployUrl}`;
+  
+  const finalFrontendUrl = `https://${deployUrl}`;
+  const finalBackendUrl = hasBackend ? `https://${deployUrl}/api` : null;
+
+  return {
+    url: finalFrontendUrl,
+    apiUrl: finalBackendUrl,
+    isFullStack: hasBackend,
+    toString: () => finalFrontendUrl
+  };
 };

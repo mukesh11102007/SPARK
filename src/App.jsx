@@ -55,15 +55,37 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
     if (newFile.trim()) { onAddFile(newFile.trim()); setNewFile(''); }
   };
   
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      onFileUpload(file.name, event.target.result);
-    };
-    reader.readAsText(file);
-    e.target.value = null; // Reset input
+  const handleFileChange = async (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    if (!selectedFiles.length) return;
+
+    for (const file of selectedFiles) {
+      if (file.name.endsWith('.zip')) {
+        try {
+          const JSZip = (await import('jszip')).default;
+          const zip = await JSZip.loadAsync(file);
+          zip.forEach((relativePath, zipEntry) => {
+            if (!zipEntry.dir) {
+              zipEntry.async('string').then(content => {
+                const cleanName = relativePath.replace(/^[^/]+\//, ''); // Strip root dir if present
+                if (cleanName && !cleanName.includes('node_modules') && !cleanName.startsWith('.')) {
+                  onFileUpload(cleanName, content);
+                }
+              });
+            }
+          });
+        } catch (err) {
+          console.error('[Zip Uploader] Failed to unpack zip:', err);
+        }
+      } else {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          onFileUpload(file.name, event.target.result);
+        };
+        reader.readAsText(file);
+      }
+    }
+    e.target.value = null;
   };
 
   return (
@@ -74,9 +96,9 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
           cursor: 'pointer', flex: 1, display: 'flex', justifyContent: 'center', 
           alignItems: 'center', gap: '6px', background: 'var(--accent, #4d3df7)', 
           color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' 
-        }} title="Upload custom file">
+        }} title="Upload custom files or project zip">
           <span style={{ fontSize: '14px' }}>⬆️</span> Upload
-          <input type="file" style={{ display: 'none' }} onChange={handleFileChange} />
+          <input type="file" multiple style={{ display: 'none' }} onChange={handleFileChange} />
         </label>
         <button 
           onClick={() => onAddFile('NewComponent.jsx')} 
@@ -474,6 +496,9 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
   const [link, setLink] = useState(() => {
     return localStorage.getItem(`deployUrl_${workspaceId}`) || null;
   });
+  const [apiLink, setApiLink] = useState(() => {
+    return localStorage.getItem(`deployApiUrl_${workspaceId}`) || null;
+  });
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleDeploy = async () => {
@@ -481,11 +506,18 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
     setStatus('deploying');
     setErrorMsg('');
     try {
-      const url = await deployProject(generatedFiles, projectName || 'spark-app', workspaceId);
-      setLink(url);
+      const res = await deployProject(generatedFiles, projectName || 'spark-app', workspaceId);
+      const mainUrl = typeof res === 'string' ? res : res.url;
+      const backendUrl = typeof res === 'object' ? res.apiUrl : null;
+
+      setLink(mainUrl);
+      setApiLink(backendUrl);
       setStatus('done');
-      localStorage.setItem(`deployUrl_${workspaceId}`, url);
-      runAutomation('deployment', { url, timestamp: Date.now() });
+
+      localStorage.setItem(`deployUrl_${workspaceId}`, mainUrl);
+      if (backendUrl) localStorage.setItem(`deployApiUrl_${workspaceId}`, backendUrl);
+
+      runAutomation('deployment', { url: mainUrl, apiUrl: backendUrl, timestamp: Date.now() });
     } catch (e) {
       console.error('[Deploy]', e);
       setStatus('error');
@@ -501,28 +533,48 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
         <svg style={{ animation: 'spin 1s linear infinite', width: 14, height: 14 }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
         </svg>
-        Publishing...
+        Publishing Full-Stack App...
       </div>
     );
   }
 
   if (status === 'done' && link) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {/* Frontend Link */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 10px' }}>
-          <span style={{ color: '#16a34a', fontSize: 11 }}>●</span>
+          <span style={{ color: '#16a34a', fontSize: 11 }}>🌐 Frontend:</span>
           <a href={link} target="_blank" rel="noreferrer"
-            style={{ fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 600, maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+            style={{ fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 600, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             title={link}
           >{link.replace('https://', '')}</a>
         </div>
         <button
           onClick={() => { navigator.clipboard.writeText(link); }}
           style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#64748b' }}
-          title="Copy link"
+          title="Copy Frontend URL"
         >Copy</button>
+
+        {/* Backend Link if full-stack */}
+        {apiLink && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '4px 10px' }}>
+              <span style={{ color: '#2563eb', fontSize: 11 }}>⚡ API:</span>
+              <a href={apiLink} target="_blank" rel="noreferrer"
+                style={{ fontSize: '0.78rem', color: '#1d4ed8', textDecoration: 'none', fontWeight: 600, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                title={apiLink}
+              >{apiLink.replace('https://', '')}</a>
+            </div>
+            <button
+              onClick={() => { navigator.clipboard.writeText(apiLink); }}
+              style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#64748b' }}
+              title="Copy Backend API URL"
+            >Copy API</button>
+          </>
+        )}
+
         <button
-          onClick={() => { setStatus('idle'); setLink(null); localStorage.removeItem(`deployUrl_${workspaceId}`); }}
+          onClick={() => { setStatus('idle'); setLink(null); setApiLink(null); localStorage.removeItem(`deployUrl_${workspaceId}`); localStorage.removeItem(`deployApiUrl_${workspaceId}`); }}
           style={{ background: 'none', border: '1px solid #e2e8f0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', color: '#64748b' }}
           title="Deploy again"
         >Redeploy</button>
