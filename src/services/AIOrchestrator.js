@@ -27,32 +27,349 @@ const generateSmartClientCode = (prompt = '', projectName = 'App', existingCode 
   
   let compName = projectName ? projectName.replace(/[^a-zA-Z0-9]/g, '') : '';
   if (!compName || compName.toLowerCase() === 'sparkapp' || compName === 'NewProject') {
-    if (p.includes('calc') || p.includes('calculator') || p.includes('math')) compName = 'CalculatorApp';
+    if (p.includes('food') || p.includes('billing') || p.includes('restaurant') || p.includes('hotel') || p.includes('indian') || p.includes('menu')) compName = 'FoodBillingApp';
+    else if (p.includes('calc') || p.includes('calculator') || p.includes('math')) compName = 'CalculatorApp';
     else if (p.includes('todo') || p.includes('task')) compName = 'TaskManager';
-    else if (p.includes('shop') || p.includes('store') || p.includes('cart')) compName = 'EcommerceApp';
-    else if (p.includes('dashboard') || p.includes('chart') || p.includes('analytic')) compName = 'AnalyticsDashboard';
-    else compName = 'CustomApp';
+    else if (p.includes('shop') || p.includes('store') || p.includes('cart') || p.includes('ecommerce')) compName = 'EcommerceApp';
+    else if (p.includes('dashboard') || p.includes('chart') || p.includes('analytic') || p.includes('revenue')) compName = 'AnalyticsDashboard';
+    else if (p.includes('portfolio') || p.includes('landing') || p.includes('saas')) compName = 'SaaSApp';
+    else compName = 'CustomWebApp';
   }
 
-  // If enhancing existing code:
-  if (existingCode && existingCode.includes('export default')) {
-    let code = existingCode;
-    if ((p.includes('dark') || p.includes('theme')) && !code.includes('isDarkMode')) {
-      code = code.replace(/export default function ([A-Za-z0-9_]+)\(\)\s*\{/, 
-        `export default function $1() {\n  const [isDarkMode, setIsDarkMode] = useState(true);`);
-    }
-    if (p.includes('search') && !code.includes('searchTerm')) {
-      code = code.replace(/export default function ([A-Za-z0-9_]+)\(\)\s*\{/, 
-        `export default function $1() {\n  const [searchTerm, setSearchTerm] = useState('');`);
-    }
-    if (p.includes('cart') && !code.includes('cart')) {
-      code = code.replace(/export default function ([A-Za-z0-9_]+)\(\)\s*\{/, 
-        `export default function $1() {\n  const [cart, setCart] = useState([]);`);
-    }
-    return code;
+  // 1. Food Billing & Indian Restaurant App with Login & Signup Auth
+  if (p.includes('food') || p.includes('billing') || p.includes('restaurant') || p.includes('hotel') || p.includes('indian') || p.includes('dish') || p.includes('dosa') || p.includes('biryani')) {
+    return `import React, { useState } from 'react';
+
+export default function ${compName}() {
+  // Auth state
+  const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState('login'); // 'login' or 'signup'
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+
+  // App state
+  const [cart, setCart] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [tableNumber, setTableNumber] = useState('Table 4');
+  const [showReceipt, setShowReceipt] = useState(false);
+
+  const menuItems = [
+    { id: 1, name: 'Hyderabadi Dum Biryani', category: 'Mains', price: 320, desc: 'Fragrant basmati rice cooked with authentic spices & marinated paneer/chicken.', img: '🍲' },
+    { id: 2, name: 'Paneer Butter Masala', category: 'Mains', price: 280, desc: 'Rich cottage cheese cubes in a creamy tomato cashew gravy.', img: '🥘' },
+    { id: 3, name: 'Butter Naan (2 Pcs)', category: 'Breads', price: 70, desc: 'Soft tandoori bread brushed with fresh creamery butter.', img: '🫓' },
+    { id: 4, name: 'Crispy Masala Dosa', category: 'South Indian', price: 150, desc: 'Thin rice crepe filled with spiced potato masala, served with coconut chutney & sambar.', img: '🫔' },
+    { id: 5, name: 'Delhi Samosa Chaat (2 Pcs)', category: 'Starters', price: 120, desc: 'Crushed samosas topped with chickpea curry, sweet yogurt & tangy tamarind chutney.', img: '🥟' },
+    { id: 6, name: 'Chicken Tikka Masala', category: 'Mains', price: 340, desc: 'Char-grilled chicken chunks in a rich onion tomato gravy.', img: '🍗' },
+    { id: 7, name: 'Hot Gulab Jamun (2 Pcs)', category: 'Desserts', price: 90, desc: 'Warm milk dumplings soaked in cardamom rose syrup.', img: '🧆' },
+    { id: 8, name: 'Chilled Mango Lassi', category: 'Beverages', price: 80, desc: 'Creamy yogurt drink blended with sweet Alphonso mango pulp.', img: '🥭' }
+  ];
+
+  const handleAuth = (e) => {
+    e.preventDefault();
+    if (!email) return;
+    setUser({ name: name || email.split('@')[0], email });
+    setShowAuthModal(false);
+    setEmail('');
+    setPassword('');
+    setName('');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+  };
+
+  const addToCart = (item) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.id === item.id);
+      if (existing) return prev.map(i => i.id === item.id ? { ...i, qty: i.qty + 1 } : i);
+      return [...prev, { ...item, qty: 1 }];
+    });
+  };
+
+  const updateQty = (id, delta) => {
+    setCart(prev => prev.map(i => {
+      if (i.id === id) {
+        const newQty = i.qty + delta;
+        return newQty > 0 ? { ...i, qty: newQty } : i;
+      }
+      return i;
+    }).filter(i => i.qty > 0));
+  };
+
+  const subtotal = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+  const gstTax = subtotal * 0.05; // 5% GST
+  const total = subtotal + gstTax;
+
+  const filteredItems = menuItems.filter(item => {
+    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  return (
+    <div style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif", background: '#090d16', color: '#f8fafc', minHeight: '100vh', padding: '24px' }}>
+      {/* Header */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', borderBottom: '1px solid #1e293b', paddingBottom: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #f97316, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 8px 20px rgba(249,115,22,0.3)' }}>
+            🍛
+          </div>
+          <div>
+            <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, background: 'linear-gradient(135deg, #f97316, #eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              ROYAL SPICE — Indian Food Billing
+            </h1>
+            <p style={{ margin: '2px 0 0', color: '#94a3b8', fontSize: '0.85rem' }}>Authentic Flavors • POS Billing • Quick GST Receipt</p>
+          </div>
+        </div>
+
+        {/* User Auth Bar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <input 
+            type="text" 
+            placeholder="🔍 Search dishes..." 
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '10px 16px', color: '#fff', outline: 'none', width: '220px', fontSize: '0.88rem' }}
+          />
+
+          {user ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', padding: '6px 14px', borderRadius: '10px', border: '1px solid #334155' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f97316' }}>👤 {user.name}</span>
+              <button onClick={handleLogout} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logout</button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button onClick={() => { setAuthMode('login'); setShowAuthModal(true); }} style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                🔑 Login
+              </button>
+              <button onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }} style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
+                ✨ Sign Up
+              </button>
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Main Grid: Menu + Cart */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 360px', gap: '24px' }}>
+        {/* Menu Section */}
+        <div>
+          {/* Category Tabs */}
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '24px', overflowX: 'auto', paddingBottom: '4px' }}>
+            {['all', 'Starters', 'Mains', 'Breads', 'South Indian', 'Desserts', 'Beverages'].map(cat => (
+              <button 
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                style={{
+                  background: selectedCategory === cat ? '#f97316' : '#0f172a',
+                  color: selectedCategory === cat ? '#ffffff' : '#94a3b8',
+                  border: '1px solid #334155',
+                  borderRadius: '10px',
+                  padding: '8px 18px',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                  fontSize: '0.88rem',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                {cat === 'all' ? '🍽️ All Items' : cat}
+              </button>
+            ))}
+          </div>
+
+          {/* Dishes Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '18px' }}>
+            {filteredItems.map(item => (
+              <div key={item.id} style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '16px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', transition: 'transform 0.2s' }}>
+                <div>
+                  <div style={{ fontSize: '2.8rem', marginBottom: '10px', textAlign: 'center' }}>{item.img}</div>
+                  <h3 style={{ margin: '0 0 6px', fontSize: '1.1rem', fontWeight: 800, color: '#f8fafc' }}>{item.name}</h3>
+                  <p style={{ margin: '0 0 16px', color: '#94a3b8', fontSize: '0.84rem', lineHeight: 1.4, minHeight: '36px' }}>{item.desc}</p>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #1e293b', paddingTop: '12px' }}>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#f97316' }}>₹{item.price}</span>
+                  <button 
+                    onClick={() => addToCart(item)}
+                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    + Add to Bill
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cart & GST Billing Sidebar */}
+        <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '20px', padding: '24px', height: 'fit-content', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #1e293b', paddingBottom: '12px' }}>
+            <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc' }}>
+              🧾 Table Order Bill
+            </h2>
+            <select 
+              value={tableNumber}
+              onChange={e => setTableNumber(e.target.value)}
+              style={{ background: '#1e293b', border: '1px solid #334155', color: '#f97316', borderRadius: '8px', padding: '4px 10px', fontWeight: 700, fontSize: '0.85rem' }}
+            >
+              {['Table 1', 'Table 2', 'Table 3', 'Table 4', 'Table 5', 'Takeaway'].map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          {cart.length === 0 ? (
+            <div style={{ textOverflow: 'ellipsis', textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
+              <div style={{ fontSize: '40px', marginBottom: '10px' }}>🛒</div>
+              <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>No items added to bill yet.</p>
+              <p style={{ margin: '4px 0 0', fontSize: '0.78rem' }}>Click "+ Add to Bill" on any dish above.</p>
+            </div>
+          ) : (
+            <>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px', maxHeight: '280px', overflowY: 'auto' }}>
+                {cart.map(item => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1e293b', padding: '10px 14px', borderRadius: '10px' }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#f8fafc' }}>{item.name}</div>
+                      <div style={{ color: '#f97316', fontSize: '0.82rem', fontWeight: 700 }}>₹{item.price} × {item.qty} = ₹{item.price * item.qty}</div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button onClick={() => updateQty(item.id, -1)} style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', fontWeight: 800, cursor: 'pointer' }}>-</button>
+                      <span style={{ fontSize: '0.88rem', fontWeight: 800, minWidth: '16px', textAlign: 'center' }}>{item.qty}</span>
+                      <button onClick={() => updateQty(item.id, 1)} style={{ background: '#334155', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', fontWeight: 800, cursor: 'pointer' }}>+</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Bill Totals */}
+              <div style={{ borderTop: '1px dashed #334155', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.88rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                  <span>Subtotal</span>
+                  <span>₹{subtotal}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8' }}>
+                  <span>GST Tax (5%)</span>
+                  <span>₹{gstTax.toFixed(2)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '1.15rem', color: '#ffffff', marginTop: '4px', paddingTop: '8px', borderTop: '1px solid #334155' }}>
+                  <span>Grand Total</span>
+                  <span style={{ color: '#10b981' }}>₹{total.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <button 
+                onClick={() => setShowReceipt(true)}
+                style={{ width: '100%', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', marginTop: '18px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(249,115,22,0.4)' }}
+              >
+                💳 Generate GST Tax Invoice
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Auth Modal (Login / Signup) */}
+      {showAuthModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ maxWidth: '400px', width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '20px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#f97316' }}>
+                {authMode === 'login' ? '🔑 POS Cashier Login' : '✨ New Staff Registration'}
+              </h3>
+              <button onClick={() => setShowAuthModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {authMode === 'signup' && (
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Staff Name</label>
+                  <input type="text" required placeholder="e.g. Ramesh Kumar" value={name} onChange={e => setName(e.target.value)} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }} />
+                </div>
+              )}
+              <div>
+                <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Email Address</label>
+                <input type="email" required placeholder="cashier@royalspice.in" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', color: '#94a3b8', display: 'block', marginBottom: '4px' }}>Password</label>
+                <input type="password" required placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', background: '#1e293b', border: '1px solid #334155', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }} />
+              </div>
+
+              <button type="submit" style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 800, fontSize: '0.95rem', cursor: 'pointer', marginTop: '6px' }}>
+                {authMode === 'login' ? 'Login Now' : 'Create Account'}
+              </button>
+            </form>
+
+            <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '0.82rem', color: '#94a3b8' }}>
+              {authMode === 'login' ? "Don't have an account? " : "Already registered? "}
+              <button onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')} style={{ background: 'none', border: 'none', color: '#f97316', fontWeight: 700, cursor: 'pointer' }}>
+                {authMode === 'login' ? 'Sign Up' : 'Login'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tax Invoice Receipt Modal */}
+      {showReceipt && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div style={{ maxWidth: '420px', width: '100%', background: '#ffffff', color: '#0f172a', borderRadius: '20px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.8)', fontFamily: "'Courier New', monospace" }}>
+            <div style={{ textAlign: 'center', borderBottom: '2px dashed #94a3b8', paddingBottom: '16px', marginBottom: '16px' }}>
+              <h2 style={{ margin: '0 0 4px', fontSize: '1.4rem', fontWeight: 900, color: '#f97316' }}>ROYAL SPICE RESTAURANT</h2>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: '#475569' }}>GSTIN: 33AAAAA0000A1Z5 • Phone: +91 98765 43210</p>
+              <p style={{ margin: '6px 0 0', fontSize: '0.82rem', fontWeight: 700 }}>TAX INVOICE / CASH BILL</p>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', marginTop: '8px' }}>
+                <span>Order #RS-{Math.floor(1000 + Math.random() * 9000)}</span>
+                <span>{tableNumber}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', fontSize: '0.85rem' }}>
+              {cart.map(item => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{item.name} x{item.qty}</span>
+                  <span style={{ fontWeight: 700 }}>₹{item.price * item.qty}</span>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderTop: '2px dashed #94a3b8', paddingTop: '12px', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>Subtotal</span>
+                <span>₹{subtotal}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                <span>CGST (2.5%) + SGST (2.5%)</span>
+                <span>₹{gstTax.toFixed(2)}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.1rem', fontWeight: 900, borderTop: '2px solid #0f172a', paddingTop: '8px', marginTop: '4px' }}>
+                <span>PAID TOTAL</span>
+                <span style={{ color: '#16a34a' }}>₹{total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div style={{ textAlign: 'center', marginTop: '20px' }}>
+              <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: '#64748b' }}>Thank you for dining with us! Have a great day! 🙏</p>
+              <button 
+                onClick={() => { setShowReceipt(false); setCart([]); alert("Bill Paid & Order Completed!"); }}
+                style={{ width: '100%', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}
+              >
+                ✓ Complete Order & Print
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}`;
   }
 
-  // Calculator Generator
+  // 2. Calculator Generator
   if (p.includes('calc') || p.includes('calculator') || p.includes('math')) {
     return `import React, { useState } from 'react';
 
@@ -60,31 +377,14 @@ export default function ${compName}() {
   const [display, setDisplay] = useState('0');
   const [history, setHistory] = useState([]);
 
-  const handleNum = (num) => {
-    setDisplay(prev => prev === '0' ? String(num) : prev + String(num));
-  };
-
-  const handleOp = (op) => {
-    const lastChar = display.slice(-1);
-    if (['+', '-', '*', '/', '%'].includes(lastChar)) {
-      setDisplay(display.slice(0, -1) + op);
-    } else {
-      setDisplay(display + ' ' + op + ' ');
-    }
-  };
-
-  const handleClear = () => {
-    setDisplay('0');
-  };
-
-  const handleDelete = () => {
-    setDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
-  };
+  const handleNum = (num) => setDisplay(prev => prev === '0' ? String(num) : prev + String(num));
+  const handleOp = (op) => setDisplay(prev => ['+', '-', '*', '/', '%'].includes(prev.slice(-1)) ? prev.slice(0, -1) + op : prev + ' ' + op + ' ');
+  const handleClear = () => setDisplay('0');
+  const handleDelete = () => setDisplay(prev => prev.length > 1 ? prev.slice(0, -1) : '0');
 
   const handleEqual = () => {
     try {
-      const cleanExpr = display.replace(/×/g, '*').replace(/÷/g, '/');
-      const res = Function('"use strict"; return (' + cleanExpr + ')')();
+      const res = Function('"use strict"; return (' + display + ')')();
       const formatted = Number.isInteger(res) ? String(res) : res.toFixed(4).replace(/0+$/, '').replace(/\\.$/, '');
       setHistory(prev => [{ expr: display, res: formatted }, ...prev.slice(0, 7)]);
       setDisplay(formatted);
@@ -97,40 +397,28 @@ export default function ${compName}() {
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ maxWidth: '400px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '24px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
-        <h1 style={{ margin: '0 0 16px', fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          🧮 Calculator Pro
-        </h1>
-
+        <h1 style={{ margin: '0 0 16px', fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>🧮 Calculator Pro</h1>
         <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '16px', padding: '20px', marginBottom: '20px', textAlign: 'right' }}>
-          <div style={{ fontSize: '0.85rem', color: '#8b949e', height: '20px', overflow: 'hidden' }}>
-            {history.length > 0 ? history[0].expr + ' = ' + history[0].res : ''}
-          </div>
-          <div style={{ fontSize: '2.4rem', fontWeight: 700, color: '#f0f6fc', letterSpacing: '1px', wordBreak: 'break-all' }}>
-            {display}
-          </div>
+          <div style={{ fontSize: '0.85rem', color: '#8b949e', height: '20px' }}>{history.length > 0 ? history[0].expr + ' = ' + history[0].res : ''}</div>
+          <div style={{ fontSize: '2.4rem', fontWeight: 700, color: '#f0f6fc' }}>{display}</div>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
           <button onClick={handleClear} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>C</button>
-          <button onClick={handleDelete} style={{ background: '#374151', color: '#f3f4f6', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>⌫</button>
-          <button onClick={() => handleOp('%')} style={{ background: '#374151', color: '#f3f4f6', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>%</button>
+          <button onClick={handleDelete} style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>⌫</button>
+          <button onClick={() => handleOp('%')} style={{ background: '#374151', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.1rem', fontWeight: 700, cursor: 'pointer' }}>%</button>
           <button onClick={() => handleOp('/')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>÷</button>
-
           <button onClick={() => handleNum(7)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>7</button>
           <button onClick={() => handleNum(8)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>8</button>
           <button onClick={() => handleNum(9)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>9</button>
           <button onClick={() => handleOp('*')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>×</button>
-
           <button onClick={() => handleNum(4)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>4</button>
           <button onClick={() => handleNum(5)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>5</button>
           <button onClick={() => handleNum(6)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>6</button>
           <button onClick={() => handleOp('-')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>-</button>
-
           <button onClick={() => handleNum(1)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>1</button>
           <button onClick={() => handleNum(2)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>2</button>
           <button onClick={() => handleNum(3)} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>3</button>
           <button onClick={() => handleOp('+')} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>+</button>
-
           <button onClick={() => handleNum(0)} style={{ gridColumn: 'span 2', background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 600, cursor: 'pointer' }}>0</button>
           <button onClick={() => handleNum('.')} style={{ background: '#1f2937', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>.</button>
           <button onClick={handleEqual} style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '12px', padding: '16px', fontSize: '1.2rem', fontWeight: 700, cursor: 'pointer' }}>=</button>
@@ -141,7 +429,7 @@ export default function ${compName}() {
 }`;
   }
 
-  // Task Manager Generator
+  // 3. Task Manager Generator
   if (p.includes('todo') || p.includes('task')) {
     return `import React, { useState } from 'react';
 
@@ -161,54 +449,28 @@ export default function ${compName}() {
     setInput('');
   };
 
-  const toggleTask = (id) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
-  };
-
-  const filteredTasks = tasks.filter(t => {
-    if (filter === 'active') return !t.completed;
-    if (filter === 'completed') return t.completed;
-    return true;
-  });
+  const toggleTask = (id) => setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  const filteredTasks = tasks.filter(t => filter === 'active' ? !t.completed : filter === 'completed' ? t.completed : true);
 
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center' }}>
       <div style={{ maxWidth: '640px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-          ⚡ ${compName}
-        </h1>
+        <h1 style={{ margin: '0 0 8px', fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>⚡ ${compName}</h1>
         <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '24px' }}>${prompt || 'Organize and track your daily tasks.'}</p>
-
         <form onSubmit={addTask} style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
-          <input 
-            type="text" 
-            placeholder="Add new task..." 
-            value={input} 
-            onChange={e => setInput(e.target.value)} 
-            style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '12px 16px', color: '#fff', outline: 'none' }}
-          />
-          <button type="submit" style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}>
-            + Add Task
-          </button>
+          <input type="text" placeholder="Add new task..." value={input} onChange={e => setInput(e.target.value)} style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '12px 16px', color: '#fff', outline: 'none' }} />
+          <button type="submit" style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 20px', fontWeight: 700, cursor: 'pointer' }}>+ Add Task</button>
         </form>
-
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {['all', 'active', 'completed'].map(f => (
-            <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? '#10b981' : '#1f2937', color: filter === f ? '#fff' : '#9ca3af', border: '1px solid #374151', borderRadius: '6px', padding: '6px 14px', textTransform: 'capitalize', cursor: 'pointer', fontWeight: 600 }}>
-              {f}
-            </button>
+            <button key={f} onClick={() => setFilter(f)} style={{ background: filter === f ? '#10b981' : '#1f2937', color: filter === f ? '#fff' : '#9ca3af', border: '1px solid #374151', borderRadius: '6px', padding: '6px 14px', textTransform: 'capitalize', cursor: 'pointer', fontWeight: 600 }}>{f}</button>
           ))}
         </div>
-
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
           {filteredTasks.map(t => (
             <div key={t.id} onClick={() => toggleTask(t.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1f2937', padding: '14px 18px', borderRadius: '10px', border: '1px solid #374151', cursor: 'pointer' }}>
-              <span style={{ textDecoration: t.completed ? 'line-through' : 'none', color: t.completed ? '#9ca3af' : '#fff' }}>
-                {t.text}
-              </span>
-              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', background: t.completed ? '#065f46' : '#374151', color: t.completed ? '#34d399' : '#9ca3af', fontWeight: 600 }}>
-                {t.completed ? '✓ Done' : 'Pending'}
-              </span>
+              <span style={{ textDecoration: t.completed ? 'line-through' : 'none', color: t.completed ? '#9ca3af' : '#fff' }}>{t.text}</span>
+              <span style={{ fontSize: '0.75rem', padding: '4px 10px', borderRadius: '6px', background: t.completed ? '#065f46' : '#374151', color: t.completed ? '#34d399' : '#9ca3af', fontWeight: 600 }}>{t.completed ? '✓ Done' : 'Pending'}</span>
             </div>
           ))}
         </div>
@@ -218,43 +480,104 @@ export default function ${compName}() {
 }`;
   }
 
-  // General App Generator
+  // 4. Cursor-Grade AI Webpage Generator (Dynamic for ANY prompt)
   return `import React, { useState } from 'react';
 
 export default function ${compName}() {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [activeTab, setActiveTab] = useState('home');
+  const [query, setQuery] = useState('');
+  const [items, setItems] = useState([
+    { id: 1, title: 'Primary Workspace Module', status: 'Active', category: 'Core' },
+    { id: 2, title: 'AI Automation Pipeline', status: 'Running', category: 'Workflow' },
+    { id: 3, title: 'Serverless API Gateway', status: 'Deployed', category: 'Cloud' }
+  ]);
+  const [newItem, setNewItem] = useState('');
+
+  const addItem = (e) => {
+    e.preventDefault();
+    if (!newItem.trim()) return;
+    setItems([...items, { id: Date.now(), title: newItem.trim(), status: 'Active', category: 'Custom' }]);
+    setNewItem('');
+  };
 
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px' }}>
+      {/* Header Bar */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid #1f2937', paddingBottom: '20px' }}>
         <div>
           <h1 style={{ margin: 0, fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             ⚡ ${compName}
           </h1>
-          <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: '0.9rem' }}>${prompt || 'Interactive custom application component.'}</p>
+          <p style={{ margin: '6px 0 0', color: '#9ca3af', fontSize: '0.9rem' }}>Prompt: "${prompt || 'Custom prompt request'}"</p>
         </div>
-        <input 
-          type="text" 
-          placeholder="Search..." 
-          value={searchTerm} 
-          onChange={e => setSearchTerm(e.target.value)} 
-          style={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none', width: '220px' }} 
-        />
+
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <input 
+            type="text" 
+            placeholder="Search app..." 
+            value={query} 
+            onChange={e => setQuery(e.target.value)} 
+            style={{ background: '#111827', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none', width: '220px' }} 
+          />
+          <button style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}>
+            + Create New
+          </button>
+        </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '14px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#10b981' }}>🚀 Prompt Request</h3>
+      {/* Main Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '32px' }}>
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#10b981' }}>🚀 AI Prompt Synthesizer</h3>
           <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            "${prompt || 'Custom prompt request'}"
+            Generated specifically to fulfill: "${prompt}"
           </p>
         </div>
 
-        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '14px', padding: '24px' }}>
-          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#6366f1' }}>⚡ Live Component</h3>
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#6366f1' }}>⚡ Component Features</h3>
           <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
-            Interactive React component ready for production build and deployment.
+            Interactive React web application featuring state management and responsive UI layout.
           </p>
+        </div>
+
+        <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+          <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: '#eab308' }}>🌐 1-Click Deployment</h3>
+          <p style={{ margin: 0, color: '#9ca3af', fontSize: '0.88rem', lineHeight: 1.5 }}>
+            Click <strong>Deploy</strong> to push this app to Vercel instantly.
+          </p>
+        </div>
+      </div>
+
+      {/* Interactive Data List */}
+      <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '24px' }}>
+        <h2 style={{ margin: '0 0 16px', fontSize: '1.3rem', fontWeight: 700 }}>📦 Active Application Items</h2>
+
+        <form onSubmit={addItem} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+          <input 
+            type="text" 
+            placeholder="Add new item..." 
+            value={newItem} 
+            onChange={e => setNewItem(e.target.value)} 
+            style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 16px', color: '#fff', outline: 'none' }} 
+          />
+          <button type="submit" style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 20px', fontWeight: 700, cursor: 'pointer' }}>
+            Add
+          </button>
+        </form>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {items.map(item => (
+            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1f2937', padding: '14px 18px', borderRadius: '10px', border: '1px solid #374151' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{item.title}</div>
+                <div style={{ color: '#9ca3af', fontSize: '0.8rem' }}>Category: {item.category}</div>
+              </div>
+              <span style={{ fontSize: '0.78rem', background: '#065f46', color: '#34d399', padding: '4px 10px', borderRadius: '6px', fontWeight: 700 }}>
+                {item.status}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
