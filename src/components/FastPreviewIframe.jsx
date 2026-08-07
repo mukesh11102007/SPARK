@@ -123,6 +123,16 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@remix-run/router@1.15.3/dist/router.umd.min.js"></script>
+  <script src="https://unpkg.com/react-router@6.22.3/dist/umd/react-router.production.min.js"></script>
+  <script src="https://unpkg.com/react-router-dom@6.22.3/dist/umd/react-router-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/styled-components@6.1.13/dist/styled-components.min.js"></script>
+  <script src="https://unpkg.com/@emotion/react@11.13.3/dist/emotion-react.umd.min.js"></script>
+  <script src="https://unpkg.com/@emotion/styled@11.13.0/dist/emotion-styled.umd.min.js"></script>
   <script>
     // Browser polyfill for CommonJS require/module/exports so Express server files never crash
     window.process = { env: { NODE_ENV: 'development', PORT: 5000 } };
@@ -150,16 +160,6 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
       return {};
     };
   </script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@remix-run/router@1.15.3/dist/router.umd.min.js"></script>
-  <script src="https://unpkg.com/react-router@6.22.3/dist/umd/react-router.production.min.js"></script>
-  <script src="https://unpkg.com/react-router-dom@6.22.3/dist/umd/react-router-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/styled-components@6.1.13/dist/styled-components.min.js"></script>
-  <script src="https://unpkg.com/@emotion/react@11.13.3/dist/emotion-react.umd.min.js"></script>
-  <script src="https://unpkg.com/@emotion/styled@11.13.0/dist/emotion-styled.umd.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
     html, body { margin: 0; padding: 0; min-height: 100vh; font-family: system-ui, -apple-system, sans-serif; background: #0d0d12; color: #f8fafc; }
