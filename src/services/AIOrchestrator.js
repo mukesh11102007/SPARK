@@ -1029,7 +1029,13 @@ Since they might be a non-technical user, you MUST inject a functional Supabase 
 - Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
 - Initialize the client OUTSIDE the component using the provided credentials:
   \`const supabase = window.supabase.createClient('${defaultUrl}', '${defaultKey}');\`
-- Build the component assuming \`supabase.from('app_data').insert(...)\` and \`supabase.from('app_data').select(...)\` are available.
+- The ONLY table available is \`app_data\`. The ONLY columns are \`id\`, \`created_at\`, \`app_name\` (text), and \`payload\` (JSONB).
+- CRITICAL MULTI-TENANCY RULE: You CANNOT insert custom columns (no price, name, etc.). You MUST wrap all custom data inside the JSONB \`payload\` column.
+- You MUST pass \`app_name: 'App_${prompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}'\` in EVERY insert to prevent data leakage between different generated apps!
+- Example Insert:
+  \`await supabase.from('app_data').insert([{ app_name: 'App_${prompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}', payload: { type: 'item', field1: 'value' } }]);\`
+- Example Fetch:
+  \`const { data } = await supabase.from('app_data').select('*').eq('app_name', 'App_${prompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}');\`
 - For login/signup pages, use \`supabase.auth.signInWithPassword({ email, password })\` and \`supabase.auth.signUp({ email, password })\`.
 - Ensure the frontend fully implements the necessary state and UI for these database interactions.
 `;
