@@ -171,10 +171,14 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
 
       let code;
       if (isEnhance) {
-        let mainCode = generatedFiles[selectedFile];
-        if (!mainCode) { alert('Selected file not found!'); return; }
+        const targetFile = (selectedFile && generatedFiles[selectedFile]) 
+          ? selectedFile 
+          : (Object.keys(generatedFiles).find(f => f.includes('App.jsx')) || Object.keys(generatedFiles)[0]);
 
-        const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, selectedFile, activeDbConfig, generatedFiles);
+        const mainCode = generatedFiles[targetFile];
+        if (!mainCode) { alert('No code found to enhance. Please build an app first!'); return; }
+
+        const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, targetFile, activeDbConfig, generatedFiles);
         code = { ...generatedFiles, ...enhancedCode };
       } else {
         const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig, stylingPreference);

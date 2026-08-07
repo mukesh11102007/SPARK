@@ -257,35 +257,36 @@ export const generateAppFromVoice = async (prompt, projectName = 'MyProject', db
 
 // ── Refine existing code via Gemini ──────────────────────────────────────────
 export const refineAppCode = async (existingCode, problemStatement, projectName, filename, dbConfig = null, workspaceFiles = null, stylingPref = 'styled-components') => {
-  console.log('[AIOrchestrator] Refining code with Gemini...', { filename });
+  const targetFile = filename || 'App.jsx';
+  console.log('[AIOrchestrator] Refining code with Gemini for target file:', targetFile);
   
   let workspaceContext = '';
   if (workspaceFiles && Object.keys(workspaceFiles).length > 1) {
     workspaceContext = `\n\nOther files in this workspace for context (DO NOT MODIFY THESE, they are just so you know what exists):\n`;
     Object.entries(workspaceFiles).forEach(([f, c]) => {
-      if (f !== filename) {
+      if (f !== targetFile) {
         workspaceContext += `\n--- ${f} ---\n\`\`\`jsx\n${c}\n\`\`\`\n`;
       }
     });
   }
 
   const raw = await executeWithFallback(problemStatement, `You are an expert React developer.
-The user wants to improve an existing React component.
+The user wants to improve and enhance an existing React component named "${targetFile}".
 
 CRITICAL RULES — MUST FOLLOW:
-1. Return ONLY raw JSX/React code. No markdown, no backticks, no explanation.
-2. Imports: import React, { useState, useEffect, useRef } from 'react'; ${stylingPref === 'styled-components' ? "and import styled from 'styled-components';" : ""}
-3. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
-4. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes).
+1. Return ONLY the updated raw JSX/React code for "${targetFile}". No markdown explanations, no conversational text, no preambles.
+2. Wrap your code inside a single \`\`\`jsx ... \`\`\` block.
+3. Imports: import React, { useState, useEffect, useRef } from 'react'; ${stylingPref === 'styled-components' ? "and import styled from 'styled-components';" : ""}
+4. DO NOT import from 'lucide-react', '@heroicons', 'react-icons', or ANY third-party library.
+5. For icons: use <i className="fa fa-..." /> HTML elements (Font Awesome classes).
 ${getStylingPrompt(stylingPref)}
-7. **COMPATIBILITY**: You are running in a browser environment. Do not use Node.js modules like 'fs' or 'path'.
-8. **COMPLETENESS**: Return the ENTIRE file content. No omissions, no "..." placeholders.
-9. PREMIUM DESIGN: Retain and enhance any premium design aesthetics (gradients, glassmorphism, animations). Never downgrade the UI to look plain.
+6. COMPLETENESS: Return the ENTIRE file content for ${targetFile}. No omissions, no "..." placeholders.
+7. PREMIUM DESIGN: Retain and enhance any premium design aesthetics.
 
 Project name: ${projectName}
-Refinement Request: ${problemStatement}
+Enhancement Request: ${problemStatement}
 
-Current Code for ${filename}:
+Current Code for ${targetFile}:
 \`\`\`jsx
 ${existingCode}
 \`\`\`
@@ -293,15 +294,38 @@ ${workspaceContext}
 
 ${getDbPrompt(dbConfig)}
 
-Remember: ONLY return the raw code.`);
-  const clean = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
-  let safeName = projectName.replace(/[^a-zA-Z0-9]/g, '');
-  if (!safeName || /^[0-9]/.test(safeName)) safeName = 'App' + safeName;
+Remember: Return ONLY the code inside \`\`\`jsx ... \`\`\`.`);
+
+  // Extract code inside ```jsx ... ``` blocks cleanly
+  let cleanCode = '';
+  const match = raw.match(/```(?:jsx|js|javascript)?\s*\n([\s\S]*?)```/i);
+  if (match && match[1]) {
+    cleanCode = match[1].trim();
+  } else {
+    cleanCode = raw.replace(/```jsx?/gi, '').replace(/```/g, '').trim();
+  }
+
+  // Remove any leading conversational text before imports or code
+  const firstImportIndex = cleanCode.indexOf('import ');
+  const firstExportIndex = cleanCode.indexOf('export ');
+  const firstConstIndex = cleanCode.indexOf('const ');
+  const firstFuncIndex = cleanCode.indexOf('function ');
   
-  // If a filename was passed, sanitize it just in case it came from an old broken generation
-  const safeFilename = filename ? filename.replace(/[^a-zA-Z0-9.]/g, '') : null;
-  const outName = safeFilename || `${safeName}Component.jsx`;
-  return { [outName]: clean };
+  const validStarts = [firstImportIndex, firstExportIndex, firstConstIndex, firstFuncIndex].filter(i => i >= 0);
+  if (validStarts.length > 0) {
+    const minStart = Math.min(...validStarts);
+    if (minStart > 0 && minStart < 200) {
+      cleanCode = cleanCode.substring(minStart);
+    }
+  }
+
+  // Remove any trailing conversational text after final brace
+  const lastBraceIndex = cleanCode.lastIndexOf('}');
+  if (lastBraceIndex > 0) {
+    cleanCode = cleanCode.substring(0, lastBraceIndex + 1);
+  }
+
+  return { [targetFile]: cleanCode };
 };
 
 // ── Review & auto-fix generated code before applying to canvas ────────────────
