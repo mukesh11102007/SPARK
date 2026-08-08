@@ -86,6 +86,14 @@ const activityLogSchema = new mongoose.Schema({
 });
 const ActivityLog = mongoose.model('ActivityLog', activityLogSchema);
 
+const projectStorageSchema = new mongoose.Schema({
+  workspaceId: { type: String, required: true, unique: true },
+  title: { type: String, default: 'spark-app' },
+  files: { type: Object, default: {} },
+  lastSaved: { type: Date, default: Date.now }
+});
+const ProjectStorage = mongoose.model('ProjectStorage', projectStorageSchema);
+
 
 // Auth Middleware
 const auth = (req, res, next) => {
@@ -298,6 +306,34 @@ app.post('/api/workspace/:id/commit', auth, async (req, res) => {
     }
     
     res.json({ success: true, log });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public Project Storage Routes (No Auth Required)
+app.get('/api/project/:workspaceId', async (req, res) => {
+  try {
+    const project = await ProjectStorage.findOne({ workspaceId: req.params.workspaceId });
+    if (!project) return res.json({ workspaceId: req.params.workspaceId, title: 'spark-app', files: {} });
+    res.json(project);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/project/:workspaceId', async (req, res) => {
+  try {
+    const { title, files } = req.body;
+    let project = await ProjectStorage.findOne({ workspaceId: req.params.workspaceId });
+    if (!project) {
+      project = new ProjectStorage({ workspaceId: req.params.workspaceId });
+    }
+    if (title !== undefined) project.title = title;
+    if (files !== undefined) project.files = files;
+    project.lastSaved = Date.now();
+    await project.save();
+    res.json({ success: true, project });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -1213,8 +1213,16 @@ function App() {
                method: 'POST',
                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                body: JSON.stringify({ title: newName })
-             }).catch(e => console.error('Failed to sync title to DB', e));
+             }).catch(e => console.error('Failed to sync title to auth DB', e));
            }
+           
+           // Always sync to the public ProjectStorage in MongoDB
+           fetch(`${API_BASE_URL}/api/project/${wsId}`, {
+             method: 'POST',
+             headers: { 'Content-Type': 'application/json' },
+             body: JSON.stringify({ title: newName })
+           }).catch(e => console.error('Failed to sync title to public DB', e));
+
            broadcastWorkspaceNameUpdate(newName);
          }
        } catch(e) {}
@@ -1353,24 +1361,18 @@ function App() {
       }
 
       try {
-        if (token) {
-          const res = await fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.title) {
-              setTeamProjectName(data.title);
+        const res = await fetch(`${API_BASE_URL}/api/project/${workspaceId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.title && data.title !== 'spark-app') {
+            setTeamProjectName(data.title);
+          }
+          if (data.files && Object.keys(data.files).length > 0) {
+            setTeamFiles(data.files);
+            if (activeWs === 'team') {
+              setGeneratedFiles(data.files);
             }
-            if (data.files && Object.keys(data.files).length > 0) {
-              setTeamFiles(data.files);
-              if (activeWs === 'team') {
-                setGeneratedFiles(data.files);
-              }
-              logActivity(`Fetched ${Object.keys(data.files).length} files from Workspace Database.`);
-            } else {
-              loadFromSupabaseFallback();
-            }
+            logActivity(`Fetched ${Object.keys(data.files).length} files from Public Database.`);
           } else {
             loadFromSupabaseFallback();
           }
@@ -1378,7 +1380,7 @@ function App() {
           loadFromSupabaseFallback();
         }
       } catch (err) {
-        console.error('Failed to load team files from DB', err);
+        console.error('Failed to load team files from Public DB', err);
         loadFromSupabaseFallback();
       }
     };
@@ -1483,6 +1485,13 @@ function App() {
         
         // Save to MongoDB Backend
         try {
+          // Always save to public ProjectStorage
+          fetch(`${API_BASE_URL}/api/project/${workspaceId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ files })
+          }).catch(e => console.error('Failed to save to public ProjectStorage', e));
+
           const token = localStorage.getItem('spark_token');
           if (token) {
             fetch(`${API_BASE_URL}/api/workspace/${workspaceId}`, {
@@ -2316,7 +2325,7 @@ function App() {
             animation: 'slideUp 0.2s ease-out',
             backdropFilter: 'blur(20px)'
           }}>
-            <ProjectChatBot files={generatedFiles} mode={currentView === 'workspace' ? 'workspace' : 'dashboard'} />
+            <ProjectChatBot files={generatedFiles} mode={currentView === 'ide' ? 'workspace' : 'dashboard'} />
           </div>
         )}
         <button
