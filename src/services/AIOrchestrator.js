@@ -1007,6 +1007,7 @@ The user has provisioned a real Supabase database. You MUST write this component
 - Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
 - Initialize the client OUTSIDE the component: 
   \`const supabase = window.supabase.createClient('${dbConfig.url}', '${dbConfig.anonKey}');\`
+- CRITICAL: DO NOT truncate, abbreviate, or shorten the anonKey. You MUST use the exact full string provided above!
 - Use the exact table name: '${dbConfig.table}' (this is a NoSQL-like logs table).
 - The ONLY columns in this table are: \`id\`, \`created_at\`, \`workspace_id\`, and \`payload\`.
 - CRITICAL: You CANNOT insert custom columns like 'name', 'price', etc. You MUST wrap ALL your app data inside the JSONB \`payload\` column!
@@ -1030,6 +1031,7 @@ Since they might be a non-technical user, you MUST inject a functional Supabase 
 - Do NOT import '@supabase/supabase-js'. It is loaded via CDN and available as \`window.supabase\`.
 - Initialize the client OUTSIDE the component using the provided credentials:
   \`const supabase = window.supabase.createClient('${defaultUrl}', '${defaultKey}');\`
+- CRITICAL: DO NOT truncate, abbreviate, or shorten the anonKey. You MUST use the exact full string provided above!
 - The ONLY table available is \`app_data\`. The ONLY columns are \`id\`, \`created_at\`, \`app_name\` (text), and \`payload\` (JSONB).
 - CRITICAL MULTI-TENANCY RULE: You CANNOT insert custom columns (no price, name, etc.). You MUST wrap all custom data inside the JSONB \`payload\` column.
 - You MUST pass \`app_name: 'App_${safePrompt.replace(/[^a-zA-Z0-9]/g, '').substring(0, 15)}'\` in EVERY insert to prevent data leakage between different generated apps!
