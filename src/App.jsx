@@ -1475,22 +1475,26 @@ function App() {
     setWcCrashLog(null);
     logActivity(`${identity?.name || 'You'} applied to canvas: ${Object.keys(files).join(', ')}`);
     
+    const workspaceId = getOrCreateWorkspaceId();
+    
+    // Always save to public ProjectStorage in MongoDB to prevent files vanishing
+    try {
+      fetch(`${API_BASE_URL}/api/project/${workspaceId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files })
+      }).catch(e => console.error('Failed to save to public ProjectStorage', e));
+    } catch (e) {}
+
     if (workspaceType === 'personal') {
       updatePersonalFiles(files);
     } else {
       setTeamFiles(files);
       if (identity) {
-        const workspaceId = getOrCreateWorkspaceId();
         broadcastCodeGenerated(workspaceId, files);
         
-        // Save to MongoDB Backend
+        // Save to Auth MongoDB Backend
         try {
-          // Always save to public ProjectStorage
-          fetch(`${API_BASE_URL}/api/project/${workspaceId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ files })
-          }).catch(e => console.error('Failed to save to public ProjectStorage', e));
 
           const token = localStorage.getItem('spark_token');
           if (token) {
