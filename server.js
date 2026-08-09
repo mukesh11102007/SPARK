@@ -270,6 +270,7 @@ app.delete('/api/workspace/:id', auth, async (req, res) => {
     if (!isOwner) return res.status(403).json({ error: 'Only owners can delete the workspace' });
 
     await Workspace.deleteOne({ _id: workspace._id });
+    await ProjectStorage.deleteOne({ workspaceId: req.params.id });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -306,6 +307,18 @@ app.post('/api/workspace/:id/commit', auth, async (req, res) => {
     }
     
     res.json({ success: true, log });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/workspace/:id/activity', auth, async (req, res) => {
+  try {
+    const logs = await ActivityLog.find({ workspaceId: req.params.id })
+      .populate('userId', 'name email avatarUrl color initials')
+      .sort({ timestamp: -1 })
+      .limit(50);
+    res.json(logs);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

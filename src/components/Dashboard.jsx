@@ -750,6 +750,55 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     }
 
     if (activePage === 'members') {
+      const [activityLogs, setActivityLogs] = React.useState([]);
+      const [loadingActivity, setLoadingActivity] = React.useState(false);
+
+      React.useEffect(() => {
+        if (membersTab === 'Activity') {
+          const fetchActivity = async () => {
+            const currentWsId = new URL(window.location.href).searchParams.get('workspace');
+            if (!currentWsId) return;
+            setLoadingActivity(true);
+            try {
+              const token = localStorage.getItem('spark_token');
+              const res = await fetch(`${API_BASE_URL}/api/workspace/${currentWsId}/activity`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              if (res.ok) {
+                const data = await res.json();
+                setActivityLogs(data);
+              }
+            } catch (err) {
+              console.error(err);
+            }
+            setLoadingActivity(false);
+          };
+          fetchActivity();
+        }
+      }, [membersTab]);
+
+      const handleDeleteWorkspaceFromSettings = async () => {
+        const currentWsId = new URL(window.location.href).searchParams.get('workspace');
+        if (!currentWsId) return;
+        const confirm = window.confirm("Are you sure you want to delete this workspace? This action cannot be undone.");
+        if (!confirm) return;
+        try {
+          const token = localStorage.getItem('spark_token');
+          await fetch(`${API_BASE_URL}/api/workspace/${currentWsId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          setRecentWorkspaces(prev => {
+            const updated = prev.filter(w => w.id !== currentWsId);
+            localStorage.setItem('spark_recent_workspaces', JSON.stringify(updated));
+            return updated;
+          });
+          setActivePage('workspaces');
+        } catch (err) {
+          alert("Failed to delete workspace.");
+        }
+      };
+
       const handleInvite = () => {
         const url = getWorkspaceInviteUrl();
         navigator.clipboard.writeText(url).then(() => {
@@ -887,38 +936,21 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', background: 'var(--panel-bg)', padding: '24px', borderRadius: '12px', border: '1px solid var(--panel-border)' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>Activity Feed</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>J</div>
-                  <div style={{ flex: 1, borderBottom: '1px solid var(--panel-border)', paddingBottom: '16px' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}><strong>John Doe</strong> updated <span style={{ color: 'var(--accent)' }}>Navbar.jsx</span></div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>2m ago</div>
+                {loadingActivity ? <div style={{ color: 'var(--text-muted)' }}>Loading activity...</div> : activityLogs.length === 0 ? <div style={{ color: 'var(--text-muted)' }}>No activity found.</div> : activityLogs.map((log) => (
+                  <div key={log._id} style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                    {log.userId?.avatarUrl ? (
+                      <img src={log.userId.avatarUrl} alt={log.userId.name} style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: log.userId?.color || '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>
+                        {log.userId?.name ? log.userId.name.substring(0, 2).toUpperCase() : 'U'}
+                      </div>
+                    )}
+                    <div style={{ flex: 1, borderBottom: '1px solid var(--panel-border)', paddingBottom: '16px' }}>
+                      <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}><strong>{log.userId?.name || 'Unknown'}</strong> {log.action} <span style={{ color: 'var(--accent)' }}>{log.details}</span></div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>{timeAgo(new Date(log.timestamp).getTime())}</div>
+                    </div>
                   </div>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>J</div>
-                  <div style={{ flex: 1, borderBottom: '1px solid var(--panel-border)', paddingBottom: '16px' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}><strong>Jane Smith</strong> deployed <span style={{ color: 'var(--accent)' }}>ecommerce-dashboard</span></div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>10m ago</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>A</div>
-                  <div style={{ flex: 1, borderBottom: '1px solid var(--panel-border)', paddingBottom: '16px' }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}><strong>Alex Johnson</strong> commented on <span style={{ color: 'var(--accent)' }}>Hero.jsx</span></div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>1h ago</div>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                  {identity?.avatarUrl ? (
-                    <img src={identity.avatarUrl} alt="You" style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: identity?.color || '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '0.8rem', fontWeight: 600 }}>{identity?.initials || 'U'}</div>
-                  )}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}><strong>{identity?.name || 'You'}</strong> created a new workspace</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>2h ago</div>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           )}
@@ -936,7 +968,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '24px', marginTop: '8px' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444', margin: '0 0 8px' }}>Danger Zone</h3>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '0 0 16px' }}>Permanently delete this workspace and all its data.</p>
-                <button style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '8px 16px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 }}>Delete Workspace</button>
+                <button onClick={handleDeleteWorkspaceFromSettings} style={{ background: 'transparent', border: '1px solid #ef4444', color: '#ef4444', padding: '8px 16px', borderRadius: '6px', fontSize: '0.85rem', cursor: 'pointer', fontWeight: 500 }}>Delete Workspace</button>
               </div>
             </div>
           )}
@@ -1367,6 +1399,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
             width: '100%',
             transition: 'background 0.2s'
           }}
+          onClick={() => window.open('https://billing.stripe.com/p/login/test_8wM6qs3XG0aO2bK9AA', '_blank')}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
           onMouseLeave={e => e.currentTarget.style.background = 'var(--panel-border-hover)'}>Upgrade Now</button>
         </div>
