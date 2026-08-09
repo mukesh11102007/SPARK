@@ -7,6 +7,8 @@ import jwt from 'jsonwebtoken';
 import cron from 'node-cron';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import { Server } from 'socket.io';
+import { createServer } from 'http';
 
 // Strict Environment Variable Verification
 let isConfigured = true;
@@ -397,10 +399,26 @@ cron.schedule('0 9 * * *', async () => {
   }
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 5000;
+const server = createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
+});
 
-// Start the server for Render or Local Development
-app.listen(PORT, () => console.log(`[Backend] Server running on port ${PORT}`));
+io.on('connection', (socket) => {
+  socket.on('join-workspace', (workspaceId) => {
+    socket.join(workspaceId);
+  });
+  
+  socket.on('code-change', ({ workspaceId, files }) => {
+    socket.to(workspaceId).emit('remote-code-change', files);
+  });
+});
+
+server.listen(PORT, () => console.log(`[Backend] Server running on port ${PORT}`));
 
 // Export for testing
 export default app;

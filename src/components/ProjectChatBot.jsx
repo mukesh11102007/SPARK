@@ -45,7 +45,7 @@ export const ProjectChatBot = ({ files, mode = 'workspace' }) => {
         messagesEndRef.current.sessionId = Math.random().toString(36).substring(7);
       }
 
-      const response = await chatWithProject(files, promptModifier, messagesEndRef.current.sessionId, mode);
+      const response = await chatWithProject(files, promptModifier, messagesEndRef.current.sessionId, mode, messages);
       setMessages(prev => [...prev, { role: 'assistant', content: response }]);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', content: `Error: ${err.message}` }]);

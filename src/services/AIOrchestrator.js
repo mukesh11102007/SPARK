@@ -1326,10 +1326,16 @@ Fix the code to resolve the error. Return ONLY the complete corrected raw JSX/Re
   }
 };
 
-export const chatWithProject = async (files, userMessage, sessionId = 'default-session') => {
-  const fileContext = Object.entries(files || {})
+export const chatWithProject = async (files, userMessage, sessionId = 'default-session', mode = 'workspace', messages = []) => {
+  const historyContext = messages.length > 1 
+    ? "Conversation History:\n" + messages.map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n') + "\n\n"
+    : "";
+
+  const fileContextString = Object.entries(files || {})
     .map(([name, code]) => `File: ${name}\n\`\`\`javascript\n${code}\n\`\`\``)
     .join('\n\n');
+
+  const fileContext = historyContext + "Current Files in Workspace:\n" + fileContextString;
 
   const CHAT_WEBHOOK_URL = import.meta.env.VITE_CHATBOT_WEBHOOK_URL || 'https://api.agents.snsihub.ai/webhook/chatbot';
 

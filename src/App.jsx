@@ -2180,6 +2180,7 @@ function App() {
                     theme={theme} 
                     activeFile={activeSourceFile}
                     readOnly={isReadOnly}
+                    workspaceId={getOrCreateWorkspaceId()}
                   />
                 </div>
               ) : activeActivity === 'preview' ? (

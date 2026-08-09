@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Editor from '@monaco-editor/react';
+import { io } from 'socket.io-client';
 
-export const CodeEditor = ({ files = {}, onFilesChange, onSelectFile, theme, activeFile, readOnly = false }) => {
+export const CodeEditor = ({ files = {}, onFilesChange, onSelectFile, theme, activeFile, readOnly = false, workspaceId }) => {
   const safeFiles = files || {};
   const fileKeys = Object.keys(safeFiles);
   const currentFile = activeFile || fileKeys[0] || 'App.jsx';
@@ -10,9 +11,32 @@ export const CodeEditor = ({ files = {}, onFilesChange, onSelectFile, theme, act
 
   const currentCode = safeFiles[currentFile] || '';
 
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (!workspaceId || readOnly) return;
+    const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
+    const socket = io(BACKEND_URL);
+    socketRef.current = socket;
+
+    socket.emit('join-workspace', workspaceId);
+
+    socket.on('remote-code-change', (newFiles) => {
+      onFilesChange(newFiles);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [workspaceId, readOnly]);
+
   const handleCodeChange = (value) => {
     if (readOnly) return;
-    onFilesChange({ ...files, [currentFile]: value });
+    const newFiles = { ...files, [currentFile]: value };
+    onFilesChange(newFiles);
+    if (socketRef.current && workspaceId) {
+      socketRef.current.emit('code-change', { workspaceId, files: newFiles });
+    }
   };
 
   const getLanguage = (fname) => {

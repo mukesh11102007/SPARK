@@ -176,6 +176,67 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
     .replace(/--+/g, '-')
     .slice(0, 50);
 
+  const extractDependencies = (filesMap) => {
+    const deps = {
+      "react": "^18.2.0",
+      "react-dom": "^18.2.0",
+      "lucide-react": "^0.263.1",
+      "@supabase/supabase-js": "^2.42.0",
+      "styled-components": "^6.1.13",
+      "@emotion/react": "^11.13.3",
+      "@emotion/styled": "^11.13.0",
+      "react-router-dom": "^6.22.3",
+      "express": "^4.19.2",
+      "cors": "^2.8.5",
+      "dotenv": "^16.4.5"
+    };
+    
+    const ignoreList = ['react', 'react-dom', 'fs', 'path', 'http', 'https', 'crypto', 'child_process', 'os', 'stream'];
+
+    Object.values(filesMap).forEach(code => {
+      if (typeof code !== 'string') return;
+      
+      const importRegex = /import\s+(?:[^"']+\s+from\s+)?['"]([^"']+)['"]/g;
+      let match;
+      while ((match = importRegex.exec(code)) !== null) {
+        let pkgName = match[1];
+        if (pkgName.startsWith('.') || pkgName.startsWith('/')) continue;
+        
+        if (pkgName.startsWith('@')) {
+          const parts = pkgName.split('/');
+          pkgName = parts.length > 1 ? `${parts[0]}/${parts[1]}` : parts[0];
+        } else {
+          pkgName = pkgName.split('/')[0];
+        }
+
+        if (!ignoreList.includes(pkgName) && !deps[pkgName]) {
+          deps[pkgName] = 'latest';
+        }
+      }
+      
+      const requireRegex = /require\(['"]([^"']+)['"]\)/g;
+      while ((match = requireRegex.exec(code)) !== null) {
+        let pkgName = match[1];
+        if (pkgName.startsWith('.') || pkgName.startsWith('/')) continue;
+        
+        if (pkgName.startsWith('@')) {
+          const parts = pkgName.split('/');
+          pkgName = parts.length > 1 ? `${parts[0]}/${parts[1]}` : parts[0];
+        } else {
+          pkgName = pkgName.split('/')[0];
+        }
+
+        if (!ignoreList.includes(pkgName) && !deps[pkgName]) {
+          deps[pkgName] = 'latest';
+        }
+      }
+    });
+
+    return deps;
+  };
+
+  const dynamicDeps = extractDependencies(filesMap);
+
   // Detect backend files
   const backendFiles = [];
   const frontendFiles = [];
@@ -300,19 +361,7 @@ export const deployProject = async (filesMap, projectName = 'spark-app', workspa
       private: true,
       version: "0.0.0",
       scripts: { "dev": "vite", "build": "vite build" },
-      dependencies: {
-        "react": "^18.2.0",
-        "react-dom": "^18.2.0",
-        "lucide-react": "^0.263.1",
-        "@supabase/supabase-js": "^2.42.0",
-        "styled-components": "^6.1.13",
-        "@emotion/react": "^11.13.3",
-        "@emotion/styled": "^11.13.0",
-        "react-router-dom": "^6.22.3",
-        "express": "^4.19.2",
-        "cors": "^2.8.5",
-        "dotenv": "^16.4.5"
-      },
+      dependencies: dynamicDeps,
       devDependencies: { "@vitejs/plugin-react": "^4.2.1", "vite": "^5.2.0" }
     }, null, 2)
   });
