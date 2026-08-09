@@ -261,6 +261,18 @@ const PreferencesSettings = () => {
     const updated = { ...prefs, [key]: !prefs[key] };
     setPrefs(updated);
     localStorage.setItem('spark_prefs', JSON.stringify(updated));
+    
+    // Play a tiny beep if sound is enabled
+    if (updated.sound || (key === 'sound' && updated.sound)) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        osc.frequency.value = 600;
+        osc.connect(ctx.destination);
+        osc.start();
+        setTimeout(() => osc.stop(), 30);
+      } catch (e) {}
+    }
   };
   const items = [
     { label: 'Email Notifications', desc: 'Receive email alerts for deployments and team mentions.', key: 'emailNotif' },
@@ -1328,6 +1340,50 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       );
     }
 
+    if (activePage === 'pricing') {
+      return (
+        <div style={{ flex: 1, overflowY: 'auto', padding: '60px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h1 style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '16px' }}>Upgrade to SPARK Pro</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '48px', textAlign: 'center', maxWidth: '600px' }}>
+            Unlock unlimited AI builds, private deployments, team collaboration, and premium support.
+          </p>
+          <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            
+            {/* Free Plan */}
+            <div style={{ width: '300px', background: 'var(--panel-bg)', border: '1px solid var(--panel-border)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '8px' }}>Starter</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '24px' }}>$0<span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>/mo</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', display: 'flex', flexDirection: 'column', gap: '16px', color: 'var(--text-muted)' }}>
+                <li>✓ 3 AI Builds per month</li>
+                <li>✓ Public Deployments</li>
+                <li>✓ Community Support</li>
+              </ul>
+              <div style={{ marginTop: 'auto' }}>
+                <button onClick={() => setActivePage('home')} style={{ width: '100%', padding: '12px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }}>Current Plan</button>
+              </div>
+            </div>
+
+            {/* Pro Plan */}
+            <div style={{ width: '300px', background: 'var(--panel-bg)', border: '2px solid var(--accent)', borderRadius: '16px', padding: '32px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+              <div style={{ position: 'absolute', top: '-14px', left: '50%', transform: 'translateX(-50%)', background: 'var(--accent)', color: '#fff', padding: '4px 16px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 600 }}>Most Popular</div>
+              <div style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--accent)', marginBottom: '8px' }}>Pro</div>
+              <div style={{ fontSize: '2.5rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '24px' }}>$19<span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>/mo</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 32px 0', display: 'flex', flexDirection: 'column', gap: '16px', color: 'var(--text-main)' }}>
+                <li>✓ <strong>Unlimited</strong> AI Builds</li>
+                <li>✓ Private Deployments</li>
+                <li>✓ Connect Custom Domains</li>
+                <li>✓ Priority Email Support</li>
+              </ul>
+              <div style={{ marginTop: 'auto' }}>
+                <button style={{ width: '100%', padding: '12px', background: 'var(--accent)', border: 'none', color: '#fff', borderRadius: '8px', fontWeight: 600, cursor: 'pointer' }} onClick={() => alert('Subscription payment gateway integration coming soon! You are currently on the Free plan.')}>Subscribe Now</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      );
+    }
+
     // Default Fallback
     return (
       <div style={{ flex: 1, overflowY: 'auto', padding: '60px', display: 'flex', flexDirection: 'column' }}>
@@ -1399,7 +1455,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
             width: '100%',
             transition: 'background 0.2s'
           }}
-          onClick={() => window.open('https://billing.stripe.com/p/login/test_8wM6qs3XG0aO2bK9AA', '_blank')}
+          onClick={() => setActivePage('pricing')}
           onMouseEnter={e => e.currentTarget.style.background = 'var(--accent)'}
           onMouseLeave={e => e.currentTarget.style.background = 'var(--panel-border-hover)'}>Upgrade Now</button>
         </div>
