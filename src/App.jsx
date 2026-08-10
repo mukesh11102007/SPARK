@@ -275,7 +275,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
               ⏳ {statusMsg}
             </div>
             <div style={{ fontSize: '0.7rem', color: '#666' }}>
-              v2.1
+              v2.2
             </div>
           </div>
         )}

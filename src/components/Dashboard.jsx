@@ -237,9 +237,9 @@ const AccountSettings = () => {
       <div>
         <h3 style={{ fontSize: '0.9rem', color: 'var(--text-main)', marginBottom: '16px' }}>Change Password</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <input type="password" placeholder="Current Password" value={pwForm.current} onChange={e => setPwForm(p => ({...p, current: e.target.value}))} style={inp} />
-          <input type="password" placeholder="New Password (min 6 chars)" value={pwForm.next} onChange={e => setPwForm(p => ({...p, next: e.target.value}))} style={inp} />
-          <input type="password" placeholder="Confirm New Password" value={pwForm.confirm} onChange={e => setPwForm(p => ({...p, confirm: e.target.value}))} style={inp} />
+          <input type="password" placeholder="Current Password" value={pwForm.current || ""} onChange={e => setPwForm(p => ({...p, current: e.target.value}))} style={inp} />
+          <input type="password" placeholder="New Password (min 6 chars)" value={pwForm.next || ""} onChange={e => setPwForm(p => ({...p, next: e.target.value}))} style={inp} />
+          <input type="password" placeholder="Confirm New Password" value={pwForm.confirm || ""} onChange={e => setPwForm(p => ({...p, confirm: e.target.value}))} style={inp} />
           {pwMsg && <div style={{ padding: '8px 12px', borderRadius: '6px', fontSize: '0.8rem', background: pwMsg.type === 'success' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: pwMsg.type === 'success' ? '#10B981' : '#ef4444', border: `1px solid ${pwMsg.type === 'success' ? '#10B981' : '#ef4444'}` }}>{pwMsg.text}</div>}
           <button className="ide-btn" onClick={handlePwUpdate} style={{ padding: '8px 16px', width: 'fit-content', marginTop: '8px' }}>Update Password</button>
         </div>
@@ -732,7 +732,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '16px' }}>
                     Choose an existing project to deploy to Vercel instantly.
                   </div>
-                  <select value={selectedDeployWs} onChange={(e) => setSelectedDeployWs(e.target.value)} style={{ width: '100%', maxWidth: '300px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none', marginBottom: '16px', appearance: 'none' }}>
+                  <select value={selectedDeployWs || ""} onChange={(e) => setSelectedDeployWs(e.target.value)} style={{ width: '100%', maxWidth: '300px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none', marginBottom: '16px', appearance: 'none' }}>
                     <option value="">-- Select Workspace --</option>
                     {recentWorkspaces.map(ws => <option key={ws.id} value={ws.id}>{ws.title}</option>)}
                   </select>
@@ -1015,19 +1015,19 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                 <div style={{ flex: 1, maxWidth: '400px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Name</label>
-                    <input type="text" value={profileForm.name} onChange={e => setProfileForm(prev => ({...prev, name: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
+                    <input type="text" value={profileForm.name || ""} onChange={e => setProfileForm(prev => ({...prev, name: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Email</label>
-                    <input type="email" value={profileForm.email} onChange={e => setProfileForm(prev => ({...prev, email: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
+                    <input type="email" value={profileForm.email || ""} onChange={e => setProfileForm(prev => ({...prev, email: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Bio</label>
-                    <input type="text" value={profileForm.bio} onChange={e => setProfileForm(prev => ({...prev, bio: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
+                    <input type="text" value={profileForm.bio || ""} onChange={e => setProfileForm(prev => ({...prev, bio: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
                   </div>
                   <div>
                     <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Account Type</label>
-                    <select value={profileForm.developerType} onChange={e => setProfileForm(prev => ({...prev, developerType: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }}>
+                    <select value={profileForm.developerType || "non-technical"} onChange={e => setProfileForm(prev => ({...prev, developerType: e.target.value}))} style={{ width: '100%', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }}>
                       <option value="technical">Developer</option>
                       <option value="non-technical">Non-Developer</option>
                     </select>
@@ -1108,7 +1108,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               <div style={{ flex: 1, zIndex: 10 }}>
                 <div style={{ background: '#13131a', border: '1px solid #27272a', borderRadius: '12px', padding: '24px', marginBottom: '24px', boxShadow: '0 8px 32px rgba(0,0,0,0.4)' }}>
                   <textarea 
-                    value={builderPrompt}
+                    value={builderPrompt || ""}
                     onChange={e => setBuilderPrompt(e.target.value)}
                     placeholder="build a attractive dashboard that shows all the data of the food sales in the chart and graph..."
                     style={{ width: '100%', height: '120px', background: 'transparent', border: 'none', color: '#fff', fontSize: '1.1rem', resize: 'none', outline: 'none', lineHeight: '1.5' }}
@@ -1502,7 +1502,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px 60px 12px' }}>
           <div style={{ position: 'relative', width: '320px' }}>
             <svg style={{ position: 'absolute', left: 12, top: 9, color: 'var(--text-muted)' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search workspaces..." style={{ width: '100%', background: 'var(--glass-bg)', border: '1px solid var(--panel-border)', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none' }} />
+            <input type="text" value={searchQuery || ""} onChange={e => setSearchQuery(e.target.value)} placeholder="Search workspaces..." style={{ width: '100%', background: 'var(--glass-bg)', border: '1px solid var(--panel-border)', padding: '8px 12px 8px 36px', borderRadius: '8px', color: 'var(--text-main)', fontSize: '0.85rem', outline: 'none' }} />
             <div style={{ position: 'absolute', right: 12, top: 8, fontSize: '0.65rem', color: 'var(--text-muted)', border: '1px solid var(--panel-border)', padding: '2px 6px', borderRadius: '4px', background: 'var(--glass-bg)' }}>⌘K</div>
           </div>
           

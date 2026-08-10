@@ -152,15 +152,15 @@ export const AuthModal = ({ onLogin }) => {
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', textAlign: 'left' }}>
           {!isLogin && (
             <>
-              <input className="auth-input" type="text" placeholder="Full Name" value={name} onChange={e => setName(e.target.value)} required />
-              <select className="auth-input" value={developerType} onChange={e => setDeveloperType(e.target.value)} style={{ appearance: 'none' }}>
+              <input className="auth-input" type="text" placeholder="Full Name" value={name || ""} onChange={e => setName(e.target.value)} required />
+              <select className="auth-input" value={developerType || "non-technical"} onChange={e => setDeveloperType(e.target.value)} style={{ appearance: 'none' }}>
                 <option value="non-technical" style={{ background: '#1a1a24' }}>I am Non-Technical (Designer/Manager)</option>
                 <option value="technical" style={{ background: '#1a1a24' }}>I am a Developer</option>
               </select>
             </>
           )}
-          <input className="auth-input" type="email" placeholder="Email Address" value={email} onChange={e => setEmail(e.target.value)} required />
-          <input className="auth-input" type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} required />
+          <input className="auth-input" type="email" placeholder="Email Address" value={email || ""} onChange={e => setEmail(e.target.value)} required />
+          <input className="auth-input" type="password" placeholder="Password" value={password || ""} onChange={e => setPassword(e.target.value)} required />
           
           {error && <div style={{ color: '#ef4444', fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span>⚠️</span> {error}
