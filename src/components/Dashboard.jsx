@@ -1,4 +1,5 @@
 import React from 'react';
+import { Brain, LayoutTemplate, Rocket } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { MyAppsPanel } from './MyAppsPanel';
 import { broadcastWorkspaceNameUpdate, broadcastRoleUpdate, getWorkspaceInviteUrl } from '../services/SupabaseService';
@@ -48,66 +49,65 @@ const timeAgo = (timestamp) => {
   return `${days}d ago`;
 };
 
-const Card = ({ title, subtitle, icon, color, buttonBg, buttonText, onClick }) => (
+const Card = ({ title, subtitle, icon: Icon, color, buttonBg, buttonText, onClick }) => (
   <div onClick={onClick} style={{
-    background: 'var(--panel-bg)',
-    borderRadius: '16px',
+    background: 'var(--panel-elevated)',
+    borderRadius: '8px',
     padding: '24px',
     border: '1px solid var(--panel-border)',
     display: 'flex',
     cursor: 'pointer',
     position: 'relative',
-    overflow: 'hidden',
-    transition: 'all 0.2s',
-    minHeight: '160px'
+    transition: 'all 0.2s ease',
+    minHeight: '180px',
+    flexDirection: 'column'
   }}
   onMouseEnter={e => {
     e.currentTarget.style.borderColor = 'var(--panel-border-hover)';
-    e.currentTarget.style.background = 'var(--panel-elevated)';
+    e.currentTarget.style.transform = 'translateY(-2px)';
+    e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
   }}
   onMouseLeave={e => {
     e.currentTarget.style.borderColor = 'var(--panel-border)';
-    e.currentTarget.style.background = 'var(--panel-bg)';
+    e.currentTarget.style.transform = 'translateY(0)';
+    e.currentTarget.style.boxShadow = 'none';
   }}>
-    <div style={{
-      position: 'absolute',
-      right: '-10px',
-      top: '50%',
-      transform: 'translateY(-50%)',
-      width: '120px',
-      height: '120px',
-      background: `radial-gradient(circle, ${color}44 0%, transparent 70%)`,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '4.5rem',
-      filter: 'drop-shadow(0 0 20px rgba(0,0,0,0.5))',
-      opacity: 0.9,
-      pointerEvents: 'none'
-    }}>
-      {icon}
-    </div>
-    <div style={{ zIndex: 1, display: 'flex', flexDirection: 'column', gap: '8px', maxWidth: '65%' }}>
-      <h3 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-main)', fontWeight: 600 }}>{title}</h3>
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.4, marginBottom: '24px' }}>{subtitle}</p>
-      <div style={{ marginTop: 'auto' }}>
-        <button style={{
-          background: buttonBg || color,
-          color: '#fff',
-          border: 'none',
-          padding: '6px 14px',
-          borderRadius: '6px',
-          fontSize: '0.75rem',
-          fontWeight: 600,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          boxShadow: `0 4px 12px ${buttonBg || color}44`
-        }}>
-          {buttonText} <span style={{ fontSize: '1rem', lineHeight: 1 }}>→</span>
-        </button>
+    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '16px' }}>
+      <div style={{ 
+        width: '40px', height: '40px', 
+        borderRadius: '8px', 
+        background: 'var(--glass-bg)',
+        border: '1px solid var(--panel-border)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        color: 'var(--text-main)'
+      }}>
+        {Icon && <Icon size={20} strokeWidth={1.5} />}
       </div>
+    </div>
+    
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+      <h3 style={{ fontSize: '1.05rem', margin: '0 0 8px 0', color: 'var(--text-main)', fontWeight: 500, letterSpacing: '-0.3px' }}>{title}</h3>
+      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>{subtitle}</p>
+    </div>
+    
+    <div style={{ marginTop: '24px' }}>
+      <button style={{
+        background: 'var(--text-main)',
+        color: 'var(--app-bg)',
+        border: 'none',
+        padding: '8px 16px',
+        borderRadius: '6px',
+        fontSize: '0.8rem',
+        fontWeight: 500,
+        cursor: 'pointer',
+        transition: 'opacity 0.2s ease',
+        width: 'fit-content'
+      }}
+      onMouseEnter={e => e.currentTarget.style.opacity = '0.9'}
+      onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+      >
+        {buttonText} &rarr;
+      </button>
     </div>
   </div>
 );
@@ -150,10 +150,13 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <div style={{ 
-            width: 34, height: 34, borderRadius: '8px', 
-            background: iconColor,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)', fontSize: '1.1rem'
-          }}>{iconEmoji}</div>
+            width: 34, height: 34, borderRadius: '6px', 
+            background: 'var(--glass-bg)',
+            border: '1px solid var(--panel-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)'
+          }}>
+            <LayoutTemplate size={16} strokeWidth={1.5} />
+          </div>
           <div>
             <div style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)', marginBottom: '2px' }}>{title}</div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Updated {time}</div>
@@ -579,37 +582,31 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '40px' }}>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-              Welcome back, {identity?.name?.split(' ')[0] || 'User'} <span style={{ fontSize: '1.4rem' }}></span>
+              Welcome back, {identity?.name?.split(' ')[0] || 'User'}
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>What will we build today?</p>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginBottom: '48px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginBottom: '48px' }}>
             <Card 
               title="AI Builder" 
-              subtitle="Build full-stack apps with natural language" 
-              color="#4D3DF7"
-              buttonBg="#4D3DF7"
+              subtitle="Build full-stack apps with natural language." 
               buttonText="Start Building"
-              icon="" 
+              icon={Brain} 
               onClick={() => setActivePage('ai-builder')}
             />
             <Card 
               title="Templates" 
-              subtitle="Start building from pre-coded templates" 
-              color="#10B981"
-              buttonBg="#10B981"
+              subtitle="Start building from pre-coded templates." 
               buttonText="Explore Templates"
-              icon="" 
+              icon={LayoutTemplate} 
               onClick={() => setActivePage('templates')}
             />
             <Card 
               title="Deploy" 
-              subtitle="One-click deployment to the cloud" 
-              color="#9C27B0"
-              buttonBg="#4D3DF7"
+              subtitle="One-click deployment to the cloud." 
               buttonText="Deploy Now"
-              icon="" 
+              icon={Rocket} 
               onClick={() => setActivePage('deployments')}
             />
           </div>
