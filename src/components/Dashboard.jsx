@@ -307,6 +307,32 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
   const [selectedDeployWs, setSelectedDeployWs] = React.useState('');
   const [builderPrompt, setBuilderPrompt] = React.useState('');
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [activityLogs, setActivityLogs] = React.useState([]);
+  const [loadingActivity, setLoadingActivity] = React.useState(false);
+
+  React.useEffect(() => {
+    if (membersTab === 'Activity') {
+      const fetchActivity = async () => {
+        const currentWsId = new URL(window.location.href).searchParams.get('workspace');
+        if (!currentWsId) return;
+        setLoadingActivity(true);
+        try {
+          const token = localStorage.getItem('spark_token');
+          const res = await fetch(`${API_BASE_URL}/api/workspace/${currentWsId}/activity`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setActivityLogs(data);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+        setLoadingActivity(false);
+      };
+      fetchActivity();
+    }
+  }, [membersTab]);
   const [workspaceOwnerEmail] = React.useState(() => {
     const params = new URLSearchParams(window.location.search);
     const urlOwner = params.get('owner');
@@ -762,33 +788,6 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
     }
 
     if (activePage === 'members') {
-      const [activityLogs, setActivityLogs] = React.useState([]);
-      const [loadingActivity, setLoadingActivity] = React.useState(false);
-
-      React.useEffect(() => {
-        if (membersTab === 'Activity') {
-          const fetchActivity = async () => {
-            const currentWsId = new URL(window.location.href).searchParams.get('workspace');
-            if (!currentWsId) return;
-            setLoadingActivity(true);
-            try {
-              const token = localStorage.getItem('spark_token');
-              const res = await fetch(`${API_BASE_URL}/api/workspace/${currentWsId}/activity`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              if (res.ok) {
-                const data = await res.json();
-                setActivityLogs(data);
-              }
-            } catch (err) {
-              console.error(err);
-            }
-            setLoadingActivity(false);
-          };
-          fetchActivity();
-        }
-      }, [membersTab]);
-
       const handleDeleteWorkspaceFromSettings = async () => {
         const currentWsId = new URL(window.location.href).searchParams.get('workspace');
         if (!currentWsId) return;
