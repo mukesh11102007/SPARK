@@ -913,7 +913,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                           </span>
                         ) : amIOwner ? (
                           <select
-                            value={currentRole}
+                            value={currentRole || 'Editor'}
                             onChange={(e) => handleRoleChange(memberKey, e.target.value)}
                             style={{
                               background: 'var(--panel-elevated)',
@@ -975,7 +975,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               </div>
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '8px', fontWeight: 500 }}>Workspace Name</label>
-                <input type="text" value={teamWorkspaceName} onChange={handleTeamWorkspaceNameChange} style={{ width: '100%', maxWidth: '400px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
+                <input type="text" value={teamWorkspaceName || ''} onChange={handleTeamWorkspaceNameChange} style={{ width: '100%', maxWidth: '400px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', padding: '10px 12px', borderRadius: '6px', color: 'var(--text-main)', outline: 'none' }} />
               </div>
               <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '24px', marginTop: '8px' }}>
                 <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#ef4444', margin: '0 0 8px' }}>Danger Zone</h3>
