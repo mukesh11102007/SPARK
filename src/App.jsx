@@ -240,7 +240,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
           type="text"
           placeholder="Project Name / Prompt (e.g. build a calculator)"
           className="ide-input"
-          value={projectName}
+          value={projectName || ''}
           onChange={(e) => setProjectName(e.target.value)}
           disabled={busy}
           style={{ marginBottom: '8px' }}
@@ -1954,7 +1954,7 @@ function App() {
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <select
                   className="ide-input"
-                  value={workspaceType}
+                  value={workspaceType || 'team'}
                   onChange={(e) => {
                     const nextType = e.target.value;
                     setWorkspaceType(nextType);
