@@ -69,7 +69,7 @@ export const ProjectChatBot = ({ files, mode = 'workspace' }) => {
         </div>
         {mode !== 'dashboard' && (
           <select 
-            value={selectedFile}
+            value={selectedFile || ''}
             onChange={(e) => setSelectedFile(e.target.value)}
             style={{
               background: 'var(--app-bg)', color: 'var(--text-main)', border: '1px solid var(--panel-border)',

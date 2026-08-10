@@ -433,6 +433,7 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
                   onChange={e => handleRoleChange(m.id, e.target.value)}
                 >
                   <option value="member">Member</option>
+                  <option value="editor">Editor</option>
                   <option value="admin">Admin</option>
                   <option value="owner">Owner</option>
                 </select>
