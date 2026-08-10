@@ -1917,7 +1917,7 @@ function App() {
     return (
       <AutomationProvider>
         {/* SparkLite Simple Mode — shown when mode is 'simple' */}
-        {sparkMode === 'simple' ? (
+        {false ? (
           <SparkLite
             workspaceId={getOrCreateWorkspaceId()}
             dbConfig={dbConfig}
