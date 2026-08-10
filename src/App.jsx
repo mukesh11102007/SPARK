@@ -270,8 +270,13 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
           </select>
         )}
         {statusMsg && (
-          <div style={{ fontSize: '0.75rem', color: '#00fa9a', marginBottom: '6px' }}>
-            ⏳ {statusMsg}
+          <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
+            <div style={{ flex: 1, fontSize: '0.75rem', color: '#00fa9a' }}>
+              ⏳ {statusMsg}
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#666' }}>
+              v2.1
+            </div>
           </div>
         )}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
