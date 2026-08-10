@@ -136,7 +136,7 @@ export const AuthModal = ({ onLogin }) => {
           margin: '0 auto 24px',
           boxShadow: '0 8px 20px rgba(77, 61, 247, 0.3)'
         }}>
-          <span style={{ fontSize: '1.8rem' }}>✨</span>
+          <span style={{ fontSize: '1.8rem' }}></span>
         </div>
         
         <h1 style={{ 
@@ -163,7 +163,7 @@ export const AuthModal = ({ onLogin }) => {
           <input className="auth-input" type="password" placeholder="Password" value={password || ""} onChange={e => setPassword(e.target.value)} required />
           
           {error && <div style={{ color: '#ef4444', fontSize: '0.85rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>⚠️</span> {error}
+            <span>️</span> {error}
           </div>}
 
           <button className="auth-btn" type="submit" disabled={loading}>

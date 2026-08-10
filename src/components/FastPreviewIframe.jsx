@@ -175,7 +175,7 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
       function showError(title, msg) {
         if (!rootEl) rootEl = document.getElementById('root');
         rootEl.innerHTML = '<div style="color:#f87171;background:#1e1b4b;border:1px solid #6366f1;padding:1.5rem;margin:1.5rem;border-radius:12px;font-family:monospace;font-size:13px;white-space:pre-wrap;">' +
-          '<strong style="font-size:14px;color:#818cf8;display:block;margin-bottom:8px;">⚠️ ' + title + '</strong>' +
+          '<strong style="font-size:14px;color:#818cf8;display:block;margin-bottom:8px;">️ ' + title + '</strong>' +
           msg.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>';
       }
 
@@ -279,7 +279,7 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
   if (!generatedFiles || Object.keys(generatedFiles).length === 0) {
     return (
       <div style={{ display:'flex', height:'100%', alignItems:'center', justifyContent:'center', color:'#94a3b8', fontSize:'0.85rem', flexDirection:'column', gap:8 }}>
-        <div style={{ fontSize:32 }}>⚛️</div>
+        <div style={{ fontSize:32 }}>️</div>
         <div>Generate a component to see live preview</div>
       </div>
     );
@@ -290,7 +290,7 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
     return (
       <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0b0f19', padding: '32px' }}>
         <div style={{ maxWidth: '540px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px', textAlign: 'center', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '16px' }}>⚡</div>
+          <div style={{ fontSize: '3rem', marginBottom: '16px' }}></div>
           <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', color: '#10b981', fontWeight: 800 }}>
             Serverless Backend API File ({activePreviewFile})
           </h2>
@@ -301,7 +301,7 @@ export const FastPreviewIframe = ({ generatedFiles, activePreviewFile, onSelectF
             onClick={() => onSelectFrontendFile && onSelectFrontendFile('App.jsx')}
             style={{ background: 'linear-gradient(135deg, #10b981, #6366f1)', color: '#fff', border: 'none', borderRadius: '8px', padding: '12px 24px', fontWeight: 700, fontSize: '0.95rem', cursor: 'pointer' }}
           >
-            👁️ Preview Frontend UI (App.jsx)
+            ️ Preview Frontend UI (App.jsx)
           </button>
         </div>
       </div>

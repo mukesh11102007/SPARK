@@ -70,7 +70,7 @@ const CustomNode = ({ data, id, selected }) => {
         alignItems: 'center',
         gap: 8,
       }}>
-        <span style={{ fontSize: 18, flexShrink: 0 }}>⚛️</span>
+        <span style={{ fontSize: 18, flexShrink: 0 }}>️</span>
         <div style={{ flex: 1, minWidth: 0 }}>
           {editing ? (
             <input

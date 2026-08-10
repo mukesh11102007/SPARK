@@ -63,7 +63,7 @@ export const VoiceAssistant = ({ onAppGenerated }) => {
         />
         <div style={{ display: 'flex', gap: '8px' }}>
           <button type="button" className="ide-btn" onClick={handleListen} disabled={isListening || isProcessing} style={{ flex: 1, backgroundColor: isListening ? '#f14c4c' : '' }}>
-             🎤 {isListening ? '...' : 'Speak'}
+              {isListening ? '...' : 'Speak'}
           </button>
           <button type="submit" className="ide-btn ide-btn-secondary" disabled={!textInput.trim() || isListening || isProcessing} style={{ flex: 1 }}>
             Send

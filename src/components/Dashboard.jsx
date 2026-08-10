@@ -188,7 +188,7 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                ✏️ Rename
+                ️ Rename
               </div>
               <div 
                 onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(id); }}
@@ -196,7 +196,7 @@ const WorkspaceCard = ({ id, title, time, tags, iconColor, iconEmoji, onClick, o
                 onMouseEnter={e => e.currentTarget.style.background = 'var(--glass-bg)'}
                 onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
               >
-                🗑️ Delete
+                ️ Delete
               </div>
             </div>
           )}
@@ -293,7 +293,7 @@ const PreferencesSettings = () => {
           </div>
         </div>
       ))}
-      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}>✅ Preferences are saved automatically to your browser.</p>
+      <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '8px' }}> Preferences are saved automatically to your browser.</p>
     </div>
   );
 };
@@ -541,7 +541,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                 time: w.updatedAt,
                 tags: ['Team', 'React'],
                 iconColor: 'linear-gradient(135deg, #4F46E5, #7C3AED)',
-                iconEmoji: '✨'
+                iconEmoji: ''
               }));
               
               const merged = [...dbWorkspaces];
@@ -563,9 +563,9 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         localStorage.setItem('spark_recent_workspaces', JSON.stringify(saved));
       } else {
         setRecentWorkspaces([
-          { id: 'ecommerce', title: 'E-Commerce Dashboard', time: '2h ago', tags: ['Team', 'React'], iconColor: 'linear-gradient(135deg, #9C27B0, #4D3DF7)', iconEmoji: '📊' },
-          { id: 'chat', title: 'Chat Application', time: '1d ago', tags: ['Team', 'Node.js'], iconColor: 'linear-gradient(135deg, #F59E0B, #D97706)', iconEmoji: '💬' },
-          { id: 'portfolio', title: 'Portfolio Website', time: '3d ago', tags: ['Personal', 'Next.js'], iconColor: 'linear-gradient(135deg, #00C48C, #059669)', iconEmoji: '🎨' }
+          { id: 'ecommerce', title: 'E-Commerce Dashboard', time: '2h ago', tags: ['Team', 'React'], iconColor: 'linear-gradient(135deg, #9C27B0, #4D3DF7)', iconEmoji: '' },
+          { id: 'chat', title: 'Chat Application', time: '1d ago', tags: ['Team', 'Node.js'], iconColor: 'linear-gradient(135deg, #F59E0B, #D97706)', iconEmoji: '' },
+          { id: 'portfolio', title: 'Portfolio Website', time: '3d ago', tags: ['Personal', 'Next.js'], iconColor: 'linear-gradient(135deg, #00C48C, #059669)', iconEmoji: '' }
         ]);
       }
     };
@@ -579,7 +579,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '40px' }}>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-main)' }}>
-              Welcome back, {identity?.name?.split(' ')[0] || 'User'} <span style={{ fontSize: '1.4rem' }}>👋</span>
+              Welcome back, {identity?.name?.split(' ')[0] || 'User'} <span style={{ fontSize: '1.4rem' }}></span>
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>What will we build today?</p>
           </div>
@@ -591,7 +591,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               color="#4D3DF7"
               buttonBg="#4D3DF7"
               buttonText="Start Building"
-              icon="🧠" 
+              icon="" 
               onClick={() => setActivePage('ai-builder')}
             />
             <Card 
@@ -600,7 +600,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               color="#10B981"
               buttonBg="#10B981"
               buttonText="Explore Templates"
-              icon="📦" 
+              icon="" 
               onClick={() => setActivePage('templates')}
             />
             <Card 
@@ -609,7 +609,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               color="#9C27B0"
               buttonBg="#4D3DF7"
               buttonText="Deploy Now"
-              icon="🚀" 
+              icon="" 
               onClick={() => setActivePage('deployments')}
             />
           </div>
@@ -629,7 +629,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                   time={ws.timestamp ? timeAgo(ws.timestamp) : (ws.time || 'just now')} 
                   tags={ws.tags || []} 
                   iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
-                  iconEmoji={ws.iconEmoji || '💻'}
+                  iconEmoji={ws.iconEmoji || ''}
                   onClick={() => onOpenWorkspace(ws.id, { title: ws.title })}
                   onRename={handleRenameWorkspace}
                   onDelete={handleDeleteWorkspace}
@@ -702,11 +702,11 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           
           {(() => {
             const allTemplates = [
-              { title: 'Admin Dashboard', desc: 'Modern admin dashboard with analytics', icon: '📊', tech: 'Next.js', category: 'Dashboards' },
-              { title: 'Blog Platform', desc: 'Full featured blog platform with markdown', icon: '✍️', tech: 'MERN Stack', category: 'Web Apps' },
-              { title: 'E-Commerce Store', desc: 'Online store with cart and payment integration', icon: '🛍️', tech: 'Next.js', category: 'Web Apps' },
-              { title: 'Portfolio Template', desc: 'Personal portfolio template for developers', icon: '👨‍💻', tech: 'React', category: 'Other' },
-              { title: 'Visual Prototyping Canvas', desc: 'Visual prototyping canvas engine', icon: '🎨', tech: 'React', category: 'Other' }
+              { title: 'Admin Dashboard', desc: 'Modern admin dashboard with analytics', icon: '', tech: 'Next.js', category: 'Dashboards' },
+              { title: 'Blog Platform', desc: 'Full featured blog platform with markdown', icon: '️', tech: 'MERN Stack', category: 'Web Apps' },
+              { title: 'E-Commerce Store', desc: 'Online store with cart and payment integration', icon: '️', tech: 'Next.js', category: 'Web Apps' },
+              { title: 'Portfolio Template', desc: 'Personal portfolio template for developers', icon: '‍', tech: 'React', category: 'Other' },
+              { title: 'Visual Prototyping Canvas', desc: 'Visual prototyping canvas engine', icon: '', tech: 'React', category: 'Other' }
             ];
 
             const filteredTemplates = allTemplates.filter(t => {
@@ -745,12 +745,12 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       return (
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>🚀 Deployment</h1>
+            <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}> Deployment</h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Deploy your app in one click</p>
           </div>
 
           <div style={{ background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)', padding: '24px', marginBottom: '32px', display: 'flex', gap: '24px' }}>
-            <div style={{ width: '180px', height: '120px', background: 'var(--panel-elevated)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🌐</div>
+            <div style={{ width: '180px', height: '120px', background: 'var(--panel-elevated)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}></div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, paddingRight: '24px' }}>
@@ -779,7 +779,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
             </div>
           ) : (
             <div style={{ padding: '40px', textAlign: 'center', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px dashed var(--panel-border)', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '16px' }}>👆</div>
+              <div style={{ fontSize: '2rem', marginBottom: '16px' }}></div>
               <div>Select a workspace above to manage its deployments.</div>
             </div>
           )}
@@ -824,7 +824,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
             <div>
               <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'linear-gradient(135deg, #3B82F6, #1E40AF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>👥</div>
+                <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'linear-gradient(135deg, #3B82F6, #1E40AF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}></div>
                 {teamWorkspaceName}
               </h1>
               <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Collaborate with your team</p>
@@ -908,7 +908,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                       <div>
                         {isOwnerUser ? (
                           <span style={{ fontSize: '0.8rem', color: '#4D3DF7', fontWeight: 600, background: 'rgba(77,61,247,0.1)', padding: '6px 14px', borderRadius: '6px', border: '1px solid rgba(77,61,247,0.2)' }}>
-                            👑 Workspace Owner
+                             Workspace Owner
                           </span>
                         ) : amIOwner ? (
                           <select
@@ -926,13 +926,13 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                               cursor: 'pointer'
                             }}
                           >
-                            <option value="Editor">✏️ Editor (Can edit code)</option>
-                            <option value="Viewer">👁️ Viewer (Read only)</option>
-                            <option value="Admin">⚡ Admin (Full control)</option>
+                            <option value="Editor">️ Editor (Can edit code)</option>
+                            <option value="Viewer">️ Viewer (Read only)</option>
+                            <option value="Admin"> Admin (Full control)</option>
                           </select>
                         ) : (
                           <span style={{ fontSize: '0.8rem', color: currentRole === 'Viewer' ? '#f59e0b' : '#10b981', fontWeight: 600, background: 'var(--glass-bg)', padding: '6px 14px', borderRadius: '6px' }}>
-                            {currentRole === 'Viewer' ? '👁️ Viewer (Read only)' : '✏️ Editor (Can edit code)'}
+                            {currentRole === 'Viewer' ? '️ Viewer (Read only)' : '️ Editor (Can edit code)'}
                           </span>
                         )}
                       </div>
@@ -1098,7 +1098,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0a0a0f', padding: '40px', overflowY: 'auto' }}>
           <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-              <div style={{ width: 40, height: 40, borderRadius: '8px', background: 'linear-gradient(135deg, #4D3DF7, #7B1FA2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}>🧠</div>
+              <div style={{ width: 40, height: 40, borderRadius: '8px', background: 'linear-gradient(135deg, #4D3DF7, #7B1FA2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}></div>
               <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#fff', margin: 0 }}>AI Builder</h1>
             </div>
             <p style={{ color: '#a1a1aa', fontSize: '1rem', margin: '0 0 40px 56px' }}>Describe your idea and let AI build it for you</p>
@@ -1117,7 +1117,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                       onClick={() => onOpenWorkspace('new', { initialPrompt: builderPrompt || 'Food Sales Dashboard with Charts' })}
                       style={{ background: '#4D3DF7', color: '#fff', border: 'none', padding: '10px 24px', borderRadius: '8px', fontSize: '0.95rem', fontWeight: 500, display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
                     >
-                      <span style={{ fontSize: '1.1rem' }}>✨</span> Build with AI
+                      <span style={{ fontSize: '1.1rem' }}></span> Build with AI
                     </button>
                     <button 
                       onClick={() => setBuilderPrompt('')}
@@ -1146,7 +1146,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               
               <div style={{ width: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                 <div style={{ width: '300px', height: '300px', background: 'radial-gradient(circle, rgba(77,61,247,0.2) 0%, rgba(0,0,0,0) 70%)', position: 'absolute', top: '-50px', right: '0', zIndex: 1 }}></div>
-                <div style={{ fontSize: '10rem', filter: 'drop-shadow(0 0 30px rgba(77,61,247,0.6))', zIndex: 2 }}>🧠</div>
+                <div style={{ fontSize: '10rem', filter: 'drop-shadow(0 0 30px rgba(77,61,247,0.6))', zIndex: 2 }}></div>
               </div>
             </div>
           </div>
@@ -1160,7 +1160,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           {/* Header */}
           <div style={{ height: '60px', borderBottom: '1px solid #27272a', display: 'flex', alignItems: 'center', padding: '0 24px', justifyContent: 'space-between', background: '#13131a' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '6px', background: 'linear-gradient(135deg, #00C48C, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>🎨</div>
+              <div style={{ width: 32, height: 32, borderRadius: '6px', background: 'linear-gradient(135deg, #00C48C, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}></div>
               <h1 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff', margin: 0 }}>Canvas</h1>
               <span style={{ color: '#a1a1aa', fontSize: '0.85rem', marginLeft: '8px' }}>Drag components and build visually</span>
             </div>
@@ -1266,7 +1266,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '32px' }}>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>📁</div>
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}></div>
               Your Workspaces
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Manage all your personal and team projects</p>
@@ -1311,7 +1311,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                       time={ws.timestamp ? timeAgo(ws.timestamp) : (ws.time || 'just now')} 
                       tags={ws.tags || []} 
                       iconColor={ws.iconColor || 'linear-gradient(135deg, #9C27B0, #4D3DF7)'}
-                      iconEmoji={ws.iconEmoji || '💻'}
+                      iconEmoji={ws.iconEmoji || ''}
                       onClick={() => onOpenWorkspace(ws.id, { title: ws.title })} 
                       onRename={handleRenameWorkspace}
                       onDelete={handleDeleteWorkspace}
@@ -1329,7 +1329,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           
           {recentWorkspaces.length === 0 && (
             <div style={{ padding: '40px', textAlign: 'center', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px dashed var(--panel-border)' }}>
-              <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🚀</div>
+              <div style={{ fontSize: '3rem', marginBottom: '16px' }}></div>
               <h3 style={{ margin: '0 0 8px', color: 'var(--text-main)' }}>No Workspaces Yet</h3>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '24px' }}>Create a new workspace or start from a template.</p>
               <button className="ide-btn" onClick={() => onOpenWorkspace('new')} style={{ padding: '10px 24px', width: 'auto' }}>Create New Workspace</button>

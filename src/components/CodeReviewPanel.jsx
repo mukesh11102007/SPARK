@@ -10,7 +10,7 @@ export const CodeReviewPanel = ({ pendingFiles, originalPrompt, projectName, onA
   const currentCode = pendingFiles[activeFile || files[0]] || '';
 
   const statusColor = reviewResult?.status === 'fixed' ? '#ffa657' : reviewResult?.status === 'ok' ? '#56d364' : '#79c0ff';
-  const statusText = reviewResult?.status === 'fixed' ? '⚠️ Issues found & auto-fixed' : reviewResult?.status === 'ok' ? '✅ Code looks good' : '🔍 Review pending...';
+  const statusText = reviewResult?.status === 'fixed' ? '️ Issues found & auto-fixed' : reviewResult?.status === 'ok' ? ' Code looks good' : ' Review pending...';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: '#0d1117', borderTop: '1px solid #30363d' }}>
@@ -18,7 +18,7 @@ export const CodeReviewPanel = ({ pendingFiles, originalPrompt, projectName, onA
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', background: '#161b22', borderBottom: '1px solid #30363d', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#e6edf3', letterSpacing: '0.5px' }}>
-            🔍 CODE REVIEW
+             CODE REVIEW
           </span>
           {isReviewing && (
             <span style={{ fontSize: '0.72rem', color: '#79c0ff', animation: 'pulse 1.5s infinite' }}>Reviewing...</span>

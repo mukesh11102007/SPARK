@@ -57,7 +57,7 @@ export class ErrorBoundary extends Component {
       return (
         <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--vscode-bg)', color: 'var(--vscode-text)', height: '100vh' }}>
           <div style={{ border: '1px solid #f14c4c', background: 'var(--vscode-sidebar)', padding: '2rem', borderRadius: '6px', maxWidth: '600px', textAlign: 'left', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
-            <h2 style={{ color: '#f14c4c', marginBottom: '1rem' }}>⚠️ REAL React Crash in IDE</h2>
+            <h2 style={{ color: '#f14c4c', marginBottom: '1rem' }}>️ REAL React Crash in IDE</h2>
             <p style={{ opacity: 0.8, marginBottom: '1rem', fontSize: '0.9rem' }}>
               SPARK Studio itself has crashed. This is an actual bug in the IDE codebase.
             </p>

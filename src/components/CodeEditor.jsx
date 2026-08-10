@@ -91,7 +91,7 @@ export const CodeEditor = ({ files = {}, onFilesChange, onSelectFile, theme, act
                 transition: 'all 0.15s'
               }}
             >
-              📄 {f}
+               {f}
             </button>
           ))}
         </div>
@@ -110,14 +110,14 @@ export const CodeEditor = ({ files = {}, onFilesChange, onSelectFile, theme, act
               cursor: 'pointer'
             }}
           >
-            {useFallback ? '⚡ Switch to Monaco' : '📝 Switch to Lightweight Editor'}
+            {useFallback ? ' Switch to Monaco' : ' Switch to Lightweight Editor'}
           </button>
         </div>
       </div>
 
       {readOnly && (
         <div style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', padding: '6px 16px', fontSize: '0.75rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(239,68,68,0.3)' }}>
-          🔒 Read-Only Mode — You have Viewer access. Contact workspace Owner to enable editing.
+           Read-Only Mode — You have Viewer access. Contact workspace Owner to enable editing.
         </div>
       )}
 

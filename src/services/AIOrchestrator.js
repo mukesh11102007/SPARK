@@ -74,7 +74,7 @@ export default function ${compName}() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: '1px solid #1f2937', paddingBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
-            🏋️‍♂️
+            ️‍️
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -85,7 +85,7 @@ export default function ${compName}() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#111827', border: '1px solid #1f2937', padding: '8px 16px', borderRadius: '12px' }}>
-          <span style={{ fontSize: '1.2rem' }}>🔥</span>
+          <span style={{ fontSize: '1.2rem' }}></span>
           <div>
             <div style={{ fontSize: '0.75rem', color: '#9ca3af', fontWeight: 600 }}>CURRENT STREAK</div>
             <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10b981' }}>7 Days Active</div>
@@ -116,7 +116,7 @@ export default function ${compName}() {
               <button onClick={() => setWaterGlasses(prev => prev + 1)} style={{ background: '#38bdf8', color: '#fff', border: 'none', borderRadius: '4px', width: '24px', height: '24px', cursor: 'pointer' }}>+</button>
             </div>
           </div>
-          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: '#f3f4f6' }}>💧 {waterGlasses} <span style={{ fontSize: '1rem', color: '#9ca3af', fontWeight: 500 }}>Glasses</span></div>
+          <div style={{ fontSize: '2.2rem', fontWeight: 800, marginTop: '8px', color: '#f3f4f6' }}> {waterGlasses} <span style={{ fontSize: '1rem', color: '#9ca3af', fontWeight: 500 }}>Glasses</span></div>
         </div>
       </div>
 
@@ -125,7 +125,7 @@ export default function ${compName}() {
         {/* Logger Form */}
         <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '20px', padding: '24px', height: 'fit-content' }}>
           <h2 style={{ margin: '0 0 18px', fontSize: '1.2rem', fontWeight: 800, color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            ✏️ Log New Workout
+            ️ Log New Workout
           </h2>
 
           <form onSubmit={handleAddWorkout} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -137,10 +137,10 @@ export default function ${compName}() {
             <div>
               <label style={{ fontSize: '0.8rem', color: '#9ca3af', display: 'block', marginBottom: '6px' }}>Category</label>
               <select value={category} onChange={e => setCategory(e.target.value)} style={{ width: '100%', background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff', outline: 'none' }}>
-                <option value="Cardio">🏃 Cardio</option>
-                <option value="Strength">🏋️ Strength Training</option>
-                <option value="Flexibility">🧘 Flexibility & Yoga</option>
-                <option value="HIIT">⚡ High Intensity HIIT</option>
+                <option value="Cardio"> Cardio</option>
+                <option value="Strength">️ Strength Training</option>
+                <option value="Flexibility"> Flexibility & Yoga</option>
+                <option value="HIIT"> High Intensity HIIT</option>
               </select>
             </div>
 
@@ -163,14 +163,14 @@ export default function ${compName}() {
 
         {/* Workouts Activity List */}
         <div style={{ background: '#111827', border: '1px solid #1f2937', borderRadius: '20px', padding: '24px' }}>
-          <h2 style={{ margin: '0 0 20px', fontSize: '1.3rem', fontWeight: 800 }}>📋 Recent Workout Sessions</h2>
+          <h2 style={{ margin: '0 0 20px', fontSize: '1.3rem', fontWeight: 800 }}> Recent Workout Sessions</h2>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {workouts.map(w => (
               <div key={w.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#1f2937', border: '1px solid #374151', borderRadius: '12px', padding: '16px 20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                   <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: w.category === 'Cardio' ? '#0284c7' : w.category === 'Strength' ? '#dc2626' : '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
-                    {w.category === 'Cardio' ? '🏃' : w.category === 'Strength' ? '🏋️' : '🧘'}
+                    {w.category === 'Cardio' ? '' : w.category === 'Strength' ? '️' : ''}
                   </div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: '1rem', color: '#f3f4f6' }}>{w.name}</div>
@@ -179,7 +179,7 @@ export default function ${compName}() {
                 </div>
 
                 <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981' }}>🔥 {w.calories} kcal</div>
+                  <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#10b981' }}> {w.calories} kcal</div>
                 </div>
               </div>
             ))}
@@ -212,14 +212,14 @@ export default function ${compName}() {
   const [showReceipt, setShowReceipt] = useState(false);
 
   const menuItems = [
-    { id: 1, name: 'Hyderabadi Dum Biryani', category: 'Mains', price: 320, desc: 'Fragrant basmati rice cooked with authentic spices & marinated paneer/chicken.', img: '🍲' },
-    { id: 2, name: 'Paneer Butter Masala', category: 'Mains', price: 280, desc: 'Rich cottage cheese cubes in a creamy tomato cashew gravy.', img: '🥘' },
-    { id: 3, name: 'Butter Naan (2 Pcs)', category: 'Breads', price: 70, desc: 'Soft tandoori bread brushed with fresh creamery butter.', img: '🫓' },
-    { id: 4, name: 'Crispy Masala Dosa', category: 'South Indian', price: 150, desc: 'Thin rice crepe filled with spiced potato masala, served with coconut chutney & sambar.', img: '🫔' },
-    { id: 5, name: 'Delhi Samosa Chaat (2 Pcs)', category: 'Starters', price: 120, desc: 'Crushed samosas topped with chickpea curry, sweet yogurt & tangy tamarind chutney.', img: '🥟' },
-    { id: 6, name: 'Chicken Tikka Masala', category: 'Mains', price: 340, desc: 'Char-grilled chicken chunks in a rich onion tomato gravy.', img: '🍗' },
-    { id: 7, name: 'Hot Gulab Jamun (2 Pcs)', category: 'Desserts', price: 90, desc: 'Warm milk dumplings soaked in cardamom rose syrup.', img: '🧆' },
-    { id: 8, name: 'Chilled Mango Lassi', category: 'Beverages', price: 80, desc: 'Creamy yogurt drink blended with sweet Alphonso mango pulp.', img: '🥭' }
+    { id: 1, name: 'Hyderabadi Dum Biryani', category: 'Mains', price: 320, desc: 'Fragrant basmati rice cooked with authentic spices & marinated paneer/chicken.', img: '' },
+    { id: 2, name: 'Paneer Butter Masala', category: 'Mains', price: 280, desc: 'Rich cottage cheese cubes in a creamy tomato cashew gravy.', img: '' },
+    { id: 3, name: 'Butter Naan (2 Pcs)', category: 'Breads', price: 70, desc: 'Soft tandoori bread brushed with fresh creamery butter.', img: '' },
+    { id: 4, name: 'Crispy Masala Dosa', category: 'South Indian', price: 150, desc: 'Thin rice crepe filled with spiced potato masala, served with coconut chutney & sambar.', img: '' },
+    { id: 5, name: 'Delhi Samosa Chaat (2 Pcs)', category: 'Starters', price: 120, desc: 'Crushed samosas topped with chickpea curry, sweet yogurt & tangy tamarind chutney.', img: '' },
+    { id: 6, name: 'Chicken Tikka Masala', category: 'Mains', price: 340, desc: 'Char-grilled chicken chunks in a rich onion tomato gravy.', img: '' },
+    { id: 7, name: 'Hot Gulab Jamun (2 Pcs)', category: 'Desserts', price: 90, desc: 'Warm milk dumplings soaked in cardamom rose syrup.', img: '' },
+    { id: 8, name: 'Chilled Mango Lassi', category: 'Beverages', price: 80, desc: 'Creamy yogurt drink blended with sweet Alphonso mango pulp.', img: '' }
   ];
 
   const handleAuth = (e) => {
@@ -270,7 +270,7 @@ export default function ${compName}() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px', borderBottom: '1px solid #1e293b', paddingBottom: '18px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #f97316, #ef4444)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 8px 20px rgba(249,115,22,0.3)' }}>
-            🍛
+            
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, background: 'linear-gradient(135deg, #f97316, #eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -284,7 +284,7 @@ export default function ${compName}() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <input 
             type="text" 
-            placeholder="🔍 Search dishes..." 
+            placeholder=" Search dishes..." 
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             style={{ background: '#0f172a', border: '1px solid #334155', borderRadius: '10px', padding: '10px 16px', color: '#fff', outline: 'none', width: '220px', fontSize: '0.88rem' }}
@@ -292,16 +292,16 @@ export default function ${compName}() {
 
           {user ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', background: '#1e293b', padding: '6px 14px', borderRadius: '10px', border: '1px solid #334155' }}>
-              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f97316' }}>👤 {user.name}</span>
+              <span style={{ fontSize: '0.88rem', fontWeight: 700, color: '#f97316' }}> {user.name}</span>
               <button onClick={handleLogout} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}>Logout</button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '8px' }}>
               <button onClick={() => { setAuthMode('login'); setShowAuthModal(true); }} style={{ background: '#1e293b', color: '#f8fafc', border: '1px solid #334155', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
-                🔑 Login
+                 Login
               </button>
               <button onClick={() => { setAuthMode('signup'); setShowAuthModal(true); }} style={{ background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, fontSize: '0.88rem', cursor: 'pointer' }}>
-                ✨ Sign Up
+                 Sign Up
               </button>
             </div>
           )}
@@ -330,7 +330,7 @@ export default function ${compName}() {
                   whiteSpace: 'nowrap'
                 }}
               >
-                {cat === 'all' ? '🍽️ All Items' : cat}
+                {cat === 'all' ? '️ All Items' : cat}
               </button>
             ))}
           </div>
@@ -363,7 +363,7 @@ export default function ${compName}() {
         <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '20px', padding: '24px', height: 'fit-content', boxShadow: '0 20px 40px rgba(0,0,0,0.4)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #1e293b', paddingBottom: '12px' }}>
             <h2 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', color: '#f8fafc' }}>
-              🧾 Table Order Bill
+               Table Order Bill
             </h2>
             <select 
               value={tableNumber}
@@ -378,7 +378,7 @@ export default function ${compName}() {
 
           {cart.length === 0 ? (
             <div style={{ textOverflow: 'ellipsis', textAlign: 'center', padding: '40px 0', color: '#64748b' }}>
-              <div style={{ fontSize: '40px', marginBottom: '10px' }}>🛒</div>
+              <div style={{ fontSize: '40px', marginBottom: '10px' }}></div>
               <p style={{ margin: 0, fontSize: '0.9rem', fontWeight: 600 }}>No items added to bill yet.</p>
               <p style={{ margin: '4px 0 0', fontSize: '0.78rem' }}>Click "+ Add to Bill" on any dish above.</p>
             </div>
@@ -420,7 +420,7 @@ export default function ${compName}() {
                 onClick={() => setShowReceipt(true)}
                 style={{ width: '100%', background: 'linear-gradient(135deg, #f97316, #ea580c)', color: '#fff', border: 'none', borderRadius: '10px', padding: '14px', marginTop: '18px', fontWeight: 800, fontSize: '1rem', cursor: 'pointer', boxShadow: '0 8px 20px rgba(249,115,22,0.4)' }}
               >
-                💳 Generate GST Tax Invoice
+                 Generate GST Tax Invoice
               </button>
             </>
           )}
@@ -433,7 +433,7 @@ export default function ${compName}() {
           <div style={{ maxWidth: '400px', width: '100%', background: '#0f172a', border: '1px solid #334155', borderRadius: '20px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <h3 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800, color: '#f97316' }}>
-                {authMode === 'login' ? '🔑 POS Cashier Login' : '✨ New Staff Registration'}
+                {authMode === 'login' ? ' POS Cashier Login' : ' New Staff Registration'}
               </h3>
               <button onClick={() => setShowAuthModal(false)} style={{ background: 'none', border: 'none', color: '#94a3b8', fontSize: '1.2rem', cursor: 'pointer' }}>✕</button>
             </div>
@@ -508,7 +508,7 @@ export default function ${compName}() {
             </div>
 
             <div style={{ textAlign: 'center', marginTop: '20px' }}>
-              <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: '#64748b' }}>Thank you for dining with us! Have a great day! 🙏</p>
+              <p style={{ margin: '0 0 14px', fontSize: '0.78rem', color: '#64748b' }}>Thank you for dining with us! Have a great day! </p>
               <button 
                 onClick={() => { setShowReceipt(false); setCart([]); alert("Bill Paid & Order Completed!"); }}
                 style={{ width: '100%', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '10px', padding: '12px', fontWeight: 800, fontSize: '0.9rem', cursor: 'pointer' }}
@@ -552,7 +552,7 @@ export default function ${compName}() {
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
       <div style={{ maxWidth: '400px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '24px', padding: '28px', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}>
-        <h1 style={{ margin: '0 0 16px', fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>🧮 Calculator Pro</h1>
+        <h1 style={{ margin: '0 0 16px', fontSize: '1.4rem', fontWeight: 800, textAlign: 'center', background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}> Calculator Pro</h1>
         <div style={{ background: '#0d1117', border: '1px solid #30363d', borderRadius: '16px', padding: '20px', marginBottom: '20px', textAlign: 'right' }}>
           <div style={{ fontSize: '0.85rem', color: '#8b949e', height: '20px' }}>{history.length > 0 ? history[0].expr + ' = ' + history[0].res : ''}</div>
           <div style={{ fontSize: '2.4rem', fontWeight: 700, color: '#f0f6fc' }}>{display}</div>
@@ -610,7 +610,7 @@ export default function ${compName}() {
   return (
     <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center' }}>
       <div style={{ maxWidth: '640px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}>
-        <h1 style={{ margin: '0 0 8px', fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>⚡ ${compName}</h1>
+        <h1 style={{ margin: '0 0 8px', fontSize: '1.8rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}> ${compName}</h1>
         <p style={{ color: '#9ca3af', fontSize: '0.9rem', marginBottom: '24px' }}>${prompt || 'Organize and track your daily tasks.'}</p>
         <form onSubmit={addTask} style={{ display: 'flex', gap: '10px', marginBottom: '24px' }}>
           <input type="text" placeholder="Add new task..." value={input} onChange={e => setInput(e.target.value)} style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '12px 16px', color: '#fff', outline: 'none' }} />
@@ -680,7 +680,7 @@ export default function ${compName}() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', borderBottom: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', paddingBottom: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'linear-gradient(135deg, #10b981, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', boxShadow: '0 8px 24px rgba(16,185,129,0.3)' }}>
-            ⚡
+            
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
@@ -697,12 +697,12 @@ export default function ${compName}() {
             onClick={() => setIsDarkMode(!isDarkMode)}
             style={{ background: isDarkMode ? '#1f2937' : '#e2e8f0', color: isDarkMode ? '#fff' : '#0f172a', border: 'none', borderRadius: '10px', padding: '10px 16px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}
           >
-            {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            {isDarkMode ? '️ Light Mode' : ' Dark Mode'}
           </button>
 
           <input 
             type="text" 
-            placeholder="🔍 Search ${cleanTitle}..." 
+            placeholder=" Search ${cleanTitle}..." 
             value={searchTerm} 
             onChange={e => setSearchTerm(e.target.value)} 
             style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #374151' : '1px solid #cbd5e1', borderRadius: '10px', padding: '10px 16px', color: isDarkMode ? '#fff' : '#0f172a', outline: 'none', width: '240px', fontSize: '0.88rem' }} 
@@ -731,7 +731,7 @@ export default function ${compName}() {
       {/* Main Interactive Management Panel */}
       <div style={{ background: isDarkMode ? '#111827' : '#ffffff', border: isDarkMode ? '1px solid #1f2937' : '1px solid #e2e8f0', borderRadius: '20px', padding: '28px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}>📦 ${cleanTitle} Control Manager</h2>
+          <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 800 }}> ${cleanTitle} Control Manager</h2>
 
           {/* Filter Tabs */}
           <div style={{ display: 'flex', gap: '8px' }}>

@@ -74,7 +74,7 @@ export const MyAppsPanel = ({ workspaceId, onUpdateApp, identity }) => {
         } catch {
           await supabase.from('deployments').update({ status: 'down' }).eq('id', app.id);
           setApps(prev => prev.map(a => a.id === app.id ? { ...a, status: 'down' } : a));
-          setAlertMsg(`⚠️ "${app.app_name}" appears to be down!`);
+          setAlertMsg(`️ "${app.app_name}" appears to be down!`);
           setTimeout(() => setAlertMsg(''), 5000);
         }
       }
@@ -149,7 +149,7 @@ export const MyAppsPanel = ({ workspaceId, onUpdateApp, identity }) => {
       {/* Header */}
       <div style={{ marginBottom: '28px' }}>
         <h2 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#f8fafc' }}>
-          🚀 My Deployed Apps
+           My Deployed Apps
         </h2>
         <p style={{ margin: '6px 0 0', color: '#6b7280', fontSize: '0.9rem' }}>
           All apps deployed from this workspace. Health is checked every 2 minutes.
@@ -176,7 +176,7 @@ export const MyAppsPanel = ({ workspaceId, onUpdateApp, identity }) => {
       {/* Filters & Search */}
       <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
         <input
-          placeholder="🔍 Search apps..."
+          placeholder=" Search apps..."
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
           style={{
@@ -209,7 +209,7 @@ export const MyAppsPanel = ({ workspaceId, onUpdateApp, identity }) => {
           background: '#450a0a', border: '1px solid #ef4444', borderRadius: '12px',
           padding: '20px', color: '#fca5a5', fontSize: '0.9rem'
         }}>
-          <strong>⚠️ Setup Required</strong><br /><br />
+          <strong>️ Setup Required</strong><br /><br />
           {error}<br /><br />
           Run this SQL in your Supabase Dashboard → SQL Editor:<br />
           <code style={{ display: 'block', marginTop: '10px', background: '#1a0505', padding: '12px', borderRadius: '8px', fontSize: '0.78rem', whiteSpace: 'pre-wrap' }}>
@@ -230,7 +230,7 @@ CREATE POLICY "Public access" ON public.deployments FOR ALL USING (true) WITH CH
         </div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px', color: '#6b7280' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '12px' }}>📭</div>
+          <div style={{ fontSize: '3rem', marginBottom: '12px' }}></div>
           {apps.length === 0
             ? 'No apps deployed yet. Build something and click Deploy!'
             : 'No apps match your search or filter.'}
@@ -249,7 +249,7 @@ CREATE POLICY "Public access" ON public.deployments FOR ALL USING (true) WITH CH
                 {/* Left — App Info */}
                 <div style={{ flex: 1, minWidth: '200px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '1.4rem' }}>⚡</span>
+                    <span style={{ fontSize: '1.4rem' }}></span>
                     <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#f8fafc' }}>{app.app_name}</span>
                     <StatusBadge status={redeploying[app.id] ? 'redeploying' : app.status} />
                   </div>
@@ -266,28 +266,28 @@ CREATE POLICY "Public access" ON public.deployments FOR ALL USING (true) WITH CH
                 {/* Right — Actions */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <a href={app.deployed_url} target="_blank" rel="noreferrer">
-                    <button style={btnStyle('#10b981', '#064e3b')}>🌐 Open</button>
+                    <button style={btnStyle('#10b981', '#064e3b')}> Open</button>
                   </a>
                   <button
                     onClick={() => handleCopy(app.id, app.deployed_url)}
                     style={btnStyle('#6366f1', '#1e1b4b')}
-                  >{copyId === app.id ? '✅ Copied!' : '📋 Copy URL'}</button>
+                  >{copyId === app.id ? ' Copied!' : ' Copy URL'}</button>
                   {onUpdateApp && (
                     <button
                       onClick={() => onUpdateApp(app)}
                       style={btnStyle('#f59e0b', '#451a03')}
-                    >✏️ Update</button>
+                    >️ Update</button>
                   )}
                   <button
                     onClick={() => handleRedeploy(app)}
                     disabled={redeploying[app.id]}
                     style={btnStyle('#3b82f6', '#1e3a5f', redeploying[app.id])}
-                  >{redeploying[app.id] ? '⟳ Deploying...' : '🔄 Re-Deploy'}</button>
+                  >{redeploying[app.id] ? '⟳ Deploying...' : ' Re-Deploy'}</button>
                   <button
                     onClick={() => handleDelete(app.id)}
                     disabled={deleting[app.id]}
                     style={btnStyle('#ef4444', '#450a0a', deleting[app.id])}
-                  >🗑️ Delete</button>
+                  >️ Delete</button>
                 </div>
               </div>
             </div>

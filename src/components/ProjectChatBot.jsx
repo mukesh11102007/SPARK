@@ -65,7 +65,7 @@ export const ProjectChatBot = ({ files, mode = 'workspace' }) => {
         fontWeight: '600', display: 'flex', alignItems: 'center', justifyContent: 'space-between', color: 'var(--text-main)'
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <span style={{ fontSize: '18px' }}>🤖</span> {mode === 'dashboard' ? 'SPARK Assistant' : 'Project Assistant'}
+          <span style={{ fontSize: '18px' }}></span> {mode === 'dashboard' ? 'SPARK Assistant' : 'Project Assistant'}
         </div>
         {mode !== 'dashboard' && (
           <select 

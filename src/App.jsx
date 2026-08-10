@@ -100,7 +100,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
           alignItems: 'center', gap: '6px', background: 'var(--accent, #4d3df7)', 
           color: '#fff', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold' 
         }} title="Upload custom files or project zip">
-          <span style={{ fontSize: '14px' }}>⬆️</span> Upload
+          <span style={{ fontSize: '14px' }}>️</span> Upload
           <input type="file" multiple style={{ display: 'none' }} onChange={handleFileChange} />
         </label>
         <button 
@@ -110,7 +110,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
             alignItems: 'center', gap: '6px', background: 'var(--glass-bg)', 
             color: 'var(--text-main)', padding: '6px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: 'bold', border: 'none'
           }} title="Create new file">
-          <span style={{ fontSize: '14px' }}>➕</span> New
+          <span style={{ fontSize: '14px' }}></span> New
         </button>
       </div>
       <form onSubmit={handleSubmit}>
@@ -131,7 +131,7 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
           color: 'var(--text-main)', border: '1px solid var(--panel-border)', borderRadius: '6px', padding: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
         }}
       >
-        ➕ Create App.jsx
+         Create App.jsx
       </button>
     </div>
   );
@@ -153,7 +153,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
     }
   }, [generatedFiles, selectedFile]);
 
-  const cookingMessages = ['🍳 Cooking up your app...', '🔥 Firing up the grill...', '✨ Sprinkling some magic...', '🤖 Teaching the robots...', '🚀 Prepping for launch...'];
+  const cookingMessages = [' Cooking up your app...', ' Firing up the grill...', ' Sprinkling some magic...', ' Teaching the robots...', ' Prepping for launch...'];
 
   const processInput = async (input, isEnhance = false) => {
     const finalInput = (input || textInput).trim() || projectName.trim();
@@ -171,14 +171,14 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
     }
 
     setIsProcessing(true);
-    setStatusMsg(isEnhance ? '✨ Enhancing your code...' : cookingMessages[Math.floor(Math.random() * cookingMessages.length)]);
+    setStatusMsg(isEnhance ? ' Enhancing your code...' : cookingMessages[Math.floor(Math.random() * cookingMessages.length)]);
 
     try {
       // Auto-provision database if user asks for real-time or db
       let activeDbConfig = dbConfig;
       const lowerInput = finalInput.toLowerCase();
       if (!activeDbConfig && workspaceId && (lowerInput.includes('real time') || lowerInput.includes('real-time') || lowerInput.includes('database') || lowerInput.includes('db'))) {
-        setStatusMsg('🔌 Auto-provisioning database...');
+        setStatusMsg(' Auto-provisioning database...');
         activeDbConfig = await provisionUserDatabase(workspaceId);
         setDbConfig(activeDbConfig);
       }
@@ -207,7 +207,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         code = { ...(generatedFiles || {}), ...newCode };
       }
 
-      setStatusMsg(isEnhance ? '✨ Enhancing & reviewing...' : '🔍 Reviewing code before applying...');
+      setStatusMsg(isEnhance ? ' Enhancing & reviewing...' : ' Reviewing code before applying...');
       onAppGenerated(code, finalInput, finalProjectName, isEnhance, isEnhance ? selectedFile : null);
       setTextInput('');
       setTimeout(() => setStatusMsg(''), 3000);
@@ -272,7 +272,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         {statusMsg && (
           <div style={{ display: 'flex', alignItems: 'center', marginBottom: '6px' }}>
             <div style={{ flex: 1, fontSize: '0.75rem', color: '#00fa9a' }}>
-              ⏳ {statusMsg}
+               {statusMsg}
             </div>
             <div style={{ fontSize: '0.7rem', color: '#666' }}>
               v2.2
@@ -282,7 +282,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
           <button type="button" className="ide-btn" onClick={handleListen} disabled={busy}
             style={{ margin: 0, flex: 1, minWidth: '80px', background: isListening ? '#ef4444' : 'var(--panel-elevated)', border: '1px solid var(--panel-border)', color: isListening ? '#fff' : 'var(--text-main)', cursor: 'pointer' }}>
-            {isListening ? '● Listening' : '🎤 Speak'}
+            {isListening ? '● Listening' : ' Speak'}
           </button>
           <button 
             type="submit" 
@@ -290,7 +290,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
             disabled={busy || (!textInput.trim() && !projectName.trim())} 
             style={{ margin: 0, flex: 1, minWidth: '80px', background: busy ? 'var(--panel-elevated)' : 'var(--accent, #4D3DF7)', color: '#ffffff', border: 'none', cursor: busy ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
           >
-            {isProcessing && statusMsg && !statusMsg.includes('Enhancing') ? 'Building...' : '⚡ Build'}
+            {isProcessing && statusMsg && !statusMsg.includes('Enhancing') ? 'Building...' : ' Build'}
           </button>
           <button
             type="button"
@@ -300,7 +300,7 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
             style={{ margin: 0, flex: 1, minWidth: '80px', background: 'var(--panel-elevated)', border: '1px solid var(--panel-border)', color: 'var(--text-main)', cursor: (busy || !generatedFiles || Object.keys(generatedFiles).length === 0) ? 'not-allowed' : 'pointer' }}
             title="Refine existing code with the prompt above"
           >
-            {isProcessing && statusMsg && statusMsg.includes('Enhancing') ? 'Enhancing...' : '✨ Enhance'}
+            {isProcessing && statusMsg && statusMsg.includes('Enhancing') ? 'Enhancing...' : ' Enhance'}
           </button>
         </div>
       </form>
@@ -360,10 +360,10 @@ const ActionsPanel = ({ onSimulateCrash }) => {
     <div className="sidebar-section">
       <h3>ACTIONS</h3>
       <button className="ide-btn ide-btn-secondary" onClick={handleCrash} disabled={isPatching}>
-        {isPatching ? 'Patching via Watchdog...' : '⚠️ Simulate WC Crash'}
+        {isPatching ? 'Patching via Watchdog...' : '️ Simulate WC Crash'}
       </button>
       <button className="ide-btn" onClick={handleDeleteWorkspace} style={{ marginTop: '10px', background: 'rgba(220, 53, 69, 0.2)', color: '#ff6b6b', border: '1px solid #ff6b6b' }}>
-        🗑️ Delete Workspace
+        ️ Delete Workspace
       </button>
     </div>
   );
@@ -578,7 +578,7 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
         {/* Frontend Link */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '4px 10px' }}>
-          <span style={{ color: '#16a34a', fontSize: 11 }}>🌐 Frontend:</span>
+          <span style={{ color: '#16a34a', fontSize: 11 }}> Frontend:</span>
           <a href={link} target="_blank" rel="noreferrer"
             style={{ fontSize: '0.78rem', color: '#15803d', textDecoration: 'none', fontWeight: 600, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
             title={link}
@@ -594,7 +594,7 @@ const ShareButton = ({ generatedFiles, projectName, workspaceId }) => {
         {apiLink && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '4px 10px' }}>
-              <span style={{ color: '#2563eb', fontSize: 11 }}>⚡ API:</span>
+              <span style={{ color: '#2563eb', fontSize: 11 }}> API:</span>
               <a href={apiLink} target="_blank" rel="noreferrer"
                 style={{ fontSize: '0.78rem', color: '#1d4ed8', textDecoration: 'none', fontWeight: 600, maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                 title={apiLink}
@@ -758,10 +758,10 @@ export default function StoreApp() {
   const [cartOpen, setCartOpen] = useState(false);
 
   const products = [
-    { id: 1, name: 'Cyberpunk Headphones', price: 299, category: 'Audio', image: '🎧' },
-    { id: 2, name: 'Minimalist Mechanical Keyboard', price: 189, category: 'Peripherals', image: '⌨️' },
-    { id: 3, name: 'Ultra-wide Curved Monitor 4K', price: 799, category: 'Displays', image: '🖥️' },
-    { id: 4, name: 'Ergonomic Precision Mouse', price: 99, category: 'Peripherals', image: '🖱️' }
+    { id: 1, name: 'Cyberpunk Headphones', price: 299, category: 'Audio', image: '' },
+    { id: 2, name: 'Minimalist Mechanical Keyboard', price: 189, category: 'Peripherals', image: '️' },
+    { id: 3, name: 'Ultra-wide Curved Monitor 4K', price: 799, category: 'Displays', image: '️' },
+    { id: 4, name: 'Ergonomic Precision Mouse', price: 99, category: 'Peripherals', image: '️' }
   ];
 
   const addToCart = (p) => {
@@ -773,9 +773,9 @@ export default function StoreApp() {
   return (
     <div style={{ minHeight: '100vh', background: '#0b0f19', color: '#f8fafc', fontFamily: 'sans-serif' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 40px', borderBottom: '1px solid #1e293b', background: '#0f172a' }}>
-        <h2 style={{ margin: 0, color: '#10b981', display: 'flex', alignItems: 'center', gap: 10 }}>🛍️ TechStore Pro</h2>
+        <h2 style={{ margin: 0, color: '#10b981', display: 'flex', alignItems: 'center', gap: 10 }}>️ TechStore Pro</h2>
         <button onClick={() => setCartOpen(true)} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}>
-          🛒 Cart ({cart.length})
+           Cart ({cart.length})
         </button>
       </header>
 
@@ -851,7 +851,7 @@ export default function BlogApp() {
     <div style={{ minHeight: '100vh', background: '#0d1117', color: '#e6edf3', fontFamily: 'sans-serif', padding: '40px 20px' }}>
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
         <header style={{ borderBottom: '1px solid #30363d', paddingBottom: 24, marginBottom: 32 }}>
-          <h1 style={{ fontSize: '2.5rem', margin: '0 0 8px', color: '#58a6ff' }}>✍️ TechPulse Blog</h1>
+          <h1 style={{ fontSize: '2.5rem', margin: '0 0 8px', color: '#58a6ff' }}>️ TechPulse Blog</h1>
           <p style={{ color: '#8b949e', fontSize: '1.1rem', margin: 0 }}>Articles on AI, Web Architecture, and Distributed Systems</p>
         </header>
 
@@ -905,7 +905,7 @@ export default function CanvasApp() {
       {/* Navbar Component */}
       <nav style={{ height: '64px', background: '#13131a', borderBottom: '1px solid #27272a', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#4D3DF7', display: 'flex', alignItems: 'center', gap: 10 }}>
-          🎨 Visual Studio Layout
+           Visual Studio Layout
         </div>
         <div style={{ display: 'flex', gap: 20, fontSize: '0.9rem', color: '#a1a1aa' }}>
           <span style={{ cursor: 'pointer', color: '#fff' }}>Home</span>
@@ -951,7 +951,7 @@ export default function CanvasApp() {
 
       {/* Footer Component */}
       <footer style={{ background: '#13131a', borderTop: '1px solid #27272a', padding: '32px', textAlign: 'center', color: '#94a3b8', fontSize: '0.9rem' }}>
-        <p style={{ margin: 0 }}>© 2026 Spark Studio Canvas Engine. Built visually with React & Supabase.</p>
+        <p style={{ margin: 0 }}> 2026 Spark Studio Canvas Engine. Built visually with React & Supabase.</p>
       </footer>
     </div>
   );
@@ -973,7 +973,7 @@ export default function PortfolioApp() {
     <div style={{ minHeight: '100vh', background: '#050508', color: '#fff', fontFamily: 'sans-serif', padding: '60px 20px' }}>
       <div style={{ maxWidth: 900, margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: 60 }}>
-          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #ec4899)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>👨‍💻</div>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'linear-gradient(135deg, #6366f1, #ec4899)', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>‍</div>
           <h1 style={{ fontSize: '3rem', margin: '0 0 12px', background: 'linear-gradient(90deg, #818cf8, #c084fc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Alex Rivers</h1>
           <p style={{ color: '#94a3b8', fontSize: '1.2rem', margin: '0 0 24px' }}>Senior Full Stack Engineer & AI Systems Architect</p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16 }}>
@@ -1211,7 +1211,7 @@ function App() {
           timestamp: Date.now(),
           tags: ['Team', 'React'],
           iconColor: 'linear-gradient(135deg, #4D3DF7, #8A2BE2)',
-          iconEmoji: '✨'
+          iconEmoji: ''
         });
         localStorage.setItem('spark_recent_workspaces', JSON.stringify(filtered.slice(0, 6)));
       } catch (e) {
@@ -1701,9 +1701,9 @@ function App() {
         <div className="sidebar-section">
           <h3>LIVE PREVIEW</h3>
           <p style={{ opacity: 0.8, fontSize: '0.85rem' }}>
-            👁️ Preview mode active.<br/><br/>
+            ️ Preview mode active.<br/><br/>
             The live app is now rendering in the main window.<br/><br/>
-            Switch back to the Explorer (📄) to see your code.
+            Switch back to the Explorer () to see your code.
           </p>
           
           {fileKeys.length > 0 && (
@@ -1749,7 +1749,7 @@ function App() {
                   borderLeft: activeSourceFile === file ? '3px solid var(--accent)' : '3px solid transparent'
                 }}
               >
-                📄 {file}
+                 {file}
               </div>
             ))}
           </div>
@@ -1768,7 +1768,7 @@ function App() {
                   disabled={isReviewing}
                   style={{ background: 'linear-gradient(135deg, #10b981, #059669)', border: 'none', color: '#fff', fontSize: '0.8rem' }}
                 >
-                  {isReviewing ? 'Formatting...' : '✨ Format for SPARK Deploy (AI)'}
+                  {isReviewing ? 'Formatting...' : ' Format for SPARK Deploy (AI)'}
                 </button>
               )}
             </div>
@@ -1781,7 +1781,7 @@ function App() {
         <div className="sidebar-section">
           <h3>MY DEPLOYED APPS</h3>
           <p style={{ opacity: 0.7, fontSize: '0.78rem', lineHeight: 1.5 }}>
-            🚀 All deployed apps shown in main panel.<br /><br />
+             All deployed apps shown in main panel.<br /><br />
             <strong>Update</strong> — enhance with a new AI prompt.<br />
             <strong>Re-Deploy</strong> — redeploy with same code.<br />
             Health is auto-checked every 2 min.
@@ -1823,9 +1823,9 @@ function App() {
   const isNonTech = identity?.developerType === 'non-technical';
 
   const activities = [
-    { id: 'explorer', icon: '📄' },
-    { id: 'preview', icon: '👁️' },
-    { id: 'source', icon: '🌿' }
+    { id: 'explorer', icon: '' },
+    { id: 'preview', icon: '️' },
+    { id: 'source', icon: '' }
   ];
 
   if (!identity) {
@@ -1862,7 +1862,7 @@ function App() {
               timestamp: Date.now(),
               tags: ['Team', 'React'],
               iconColor: 'linear-gradient(135deg, #4D3DF7, #8A2BE2)',
-              iconEmoji: '✨'
+              iconEmoji: ''
             });
             localStorage.setItem('spark_recent_workspaces', JSON.stringify(saved.slice(0, 10)));
           } catch (e) {}
@@ -2212,7 +2212,7 @@ function App() {
                             onClick={handleAutoHeal}
                             style={{ background: 'linear-gradient(135deg, #6e40c9, #58a6ff)', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', fontSize: '0.7rem', cursor: 'pointer', fontWeight: 'bold' }}
                           >
-                            ✨ Auto-Heal with AI
+                             Auto-Heal with AI
                           </button>
                         </div>
                         <pre style={{ color: '#f14c4c', whiteSpace: 'pre-wrap', fontFamily: 'var(--font-family)', fontSize: '0.82rem', margin: 0 }}>
@@ -2251,7 +2251,7 @@ function App() {
               animation: 'slideInRight 0.3s ease-out forwards',
               maxWidth: '350px'
             }}>
-              {n.type === 'success' ? '✨' : '🔔'} {n.message}
+              {n.type === 'success' ? '' : ''} {n.message}
             </div>
           ))}
         </div>
@@ -2291,7 +2291,7 @@ function App() {
           }}
           title="Toggle AI Assistant"
         >
-          {isChatOpen ? '✕' : '💬'}
+          {isChatOpen ? '✕' : ''}
         </button>
       </div>
     </>

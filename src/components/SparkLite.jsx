@@ -16,11 +16,11 @@ export const SparkLite = ({ workspaceId, dbConfig, identity, onSwitchPro }) => {
 
   const statusMap = {
     idle: null,
-    building: { icon: '🤖', text: 'AI is building your app...', color: '#6366f1' },
-    reviewing: { icon: '🔍', text: 'Reviewing & polishing code...', color: '#f59e0b' },
-    deploying: { icon: '🚀', text: 'Deploying to the cloud...', color: '#3b82f6' },
-    done: { icon: '✅', text: 'Your app is live!', color: '#10b981' },
-    error: { icon: '❌', text: errorMsg || 'Something went wrong. Please try again.', color: '#ef4444' },
+    building: { icon: '', text: 'AI is building your app...', color: '#6366f1' },
+    reviewing: { icon: '', text: 'Reviewing & polishing code...', color: '#f59e0b' },
+    deploying: { icon: '', text: 'Deploying to the cloud...', color: '#3b82f6' },
+    done: { icon: '', text: 'Your app is live!', color: '#10b981' },
+    error: { icon: '', text: errorMsg || 'Something went wrong. Please try again.', color: '#ef4444' },
   };
 
   const handleBuildAndDeploy = async () => {
@@ -77,14 +77,14 @@ export const SparkLite = ({ workspaceId, dbConfig, identity, onSwitchPro }) => {
       {/* Top bar */}
       <div style={{ position: 'fixed', top: 0, left: 0, right: 0, padding: '12px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#0b0f19', borderBottom: '1px solid #1f2937', zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.4rem' }}>⚡</span>
+          <span style={{ fontSize: '1.4rem' }}></span>
           <span style={{ fontWeight: 800, fontSize: '1.1rem', background: 'linear-gradient(135deg, #10b981, #6366f1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>SPARK</span>
           <span style={{ background: '#1f2937', color: '#6b7280', fontSize: '0.7rem', padding: '2px 8px', borderRadius: '20px', fontWeight: 700 }}>SIMPLE MODE</span>
         </div>
         <button onClick={onSwitchPro} style={{
           background: 'transparent', border: '1px solid #374151', color: '#9ca3af',
           borderRadius: '8px', padding: '6px 14px', fontSize: '0.8rem', cursor: 'pointer', fontWeight: 600
-        }}>⚙️ Switch to Pro Mode</button>
+        }}>️ Switch to Pro Mode</button>
       </div>
 
       {/* Main Content */}
@@ -135,7 +135,7 @@ export const SparkLite = ({ workspaceId, dbConfig, identity, onSwitchPro }) => {
               alignSelf: 'flex-end'
             }}
           >
-            {isProcessing ? '⟳ Working...' : '⚡ Build & Deploy'}
+            {isProcessing ? '⟳ Working...' : ' Build & Deploy'}
           </button>
         </div>
 
@@ -165,17 +165,17 @@ export const SparkLite = ({ workspaceId, dbConfig, identity, onSwitchPro }) => {
             border: '1px solid #10b98140', borderRadius: '20px', padding: '28px',
             marginBottom: '32px'
           }}>
-            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>🎉</div>
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}></div>
             <div style={{ fontWeight: 800, fontSize: '1.2rem', color: '#10b981', marginBottom: '8px' }}>Your app is live!</div>
             <div style={{ color: '#6b7280', fontSize: '0.85rem', marginBottom: '16px' }}>Share this link with your team. No login required for your users.</div>
 
             <div style={{ display: 'flex', gap: '10px', alignItems: 'center', background: '#111827', border: '1px solid #374151', borderRadius: '12px', padding: '12px 16px' }}>
               <a href={liveUrl} target="_blank" rel="noreferrer" style={{ flex: 1, color: '#6366f1', fontSize: '0.88rem', fontFamily: 'monospace', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{liveUrl}</a>
               <button onClick={handleCopy} style={{ background: '#1f2937', color: '#9ca3af', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                {copied ? '✅ Copied!' : '📋 Copy'}
+                {copied ? ' Copied!' : ' Copy'}
               </button>
               <a href={liveUrl} target="_blank" rel="noreferrer">
-                <button style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}>🌐 Open</button>
+                <button style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 14px', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer' }}> Open</button>
               </a>
             </div>
 
@@ -219,7 +219,7 @@ export const SparkLite = ({ workspaceId, dbConfig, identity, onSwitchPro }) => {
               {recentApps.map((app, i) => (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#111827', border: '1px solid #1f2937', borderRadius: '10px', padding: '10px 16px' }}>
                   <span style={{ color: '#9ca3af', fontSize: '0.82rem' }}>"{app.prompt}"</span>
-                  <a href={app.url} target="_blank" rel="noreferrer" style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Open ↗</a>
+                  <a href={app.url} target="_blank" rel="noreferrer" style={{ color: '#6366f1', fontSize: '0.78rem', fontWeight: 700, textDecoration: 'none' }}>Open </a>
                 </div>
               ))}
             </div>

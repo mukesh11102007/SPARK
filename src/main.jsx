@@ -22,7 +22,7 @@ class GlobalErrorBoundary extends React.Component {
           alignItems: 'center', justifyContent: 'center', background: '#0d0d12',
           color: '#f87171', fontFamily: 'system-ui, sans-serif', padding: '2rem'
         }}>
-          <h2 style={{ marginBottom: '1rem' }}>⚠️ SPARK Studio Runtime Encountered an Issue</h2>
+          <h2 style={{ marginBottom: '1rem' }}>️ SPARK Studio Runtime Encountered an Issue</h2>
           <pre style={{
             background: '#1a1a24', padding: '1rem', borderRadius: '8px',
             color: '#fca5a5', maxWidth: '800px', overflowX: 'auto', border: '1px solid #2e2e3e'
