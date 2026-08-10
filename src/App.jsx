@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Folder, Eye, Code } from 'lucide-react';
 import { AutomationProvider, useAutomation } from './contexts/AutomationContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { CanvasEditor } from './components/CanvasEditor';
@@ -1823,9 +1824,9 @@ function App() {
   const isNonTech = identity?.developerType === 'non-technical';
 
   const activities = [
-    { id: 'explorer', icon: '' },
-    { id: 'preview', icon: '️' },
-    { id: 'source', icon: '' }
+    { id: 'explorer', icon: <Folder size={20} strokeWidth={1.5} /> },
+    { id: 'preview', icon: <Eye size={20} strokeWidth={1.5} /> },
+    { id: 'source', icon: <Code size={20} strokeWidth={1.5} /> }
   ];
 
   if (!identity) {
