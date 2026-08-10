@@ -124,72 +124,14 @@ const FileExplorer = ({ onAddFile, onFileUpload }) => {
       </form>
       <button 
         onClick={() => {
-          onFileUpload('App.jsx', `import React, { useState, useEffect } from 'react';
-
-export default function App() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [newItem, setNewItem] = useState('');
-  const [status, setStatus] = useState('Checking Express API...');
-
-  useEffect(() => {
-    fetch('/api/todos')
-      .then(res => res.json())
-      .then(data => {
-        setItems(data.items || []);
-        setStatus('⚡ Connected to Express Backend API (/api/todos)');
-        setLoading(false);
-      })
-      .catch(() => {
-        setStatus('⚠️ Full-Stack Serverless Mode (Mock API active)');
-        setItems([
-          { id: 1, text: 'Build React Frontend', completed: true },
-          { id: 2, text: 'Deploy Express Backend API', completed: true },
-          { id: 3, text: 'Test Full-Stack Deployment on Vercel', completed: false }
-        ]);
-        setLoading(false);
-      });
-  }, []);
-
-  const handleAdd = (e) => {
-    e.preventDefault();
-    if (!newItem.trim()) return;
-    const item = { id: Date.now(), text: newItem, completed: false };
-    setItems([...items, item]);
-    setNewItem('');
-  };
-
-  return (
-    <div style={{ fontFamily: 'Inter, system-ui, sans-serif', background: '#0b0f19', color: '#f3f4f6', minHeight: '100vh', padding: '32px', display: 'flex', justifyContent: 'center' }}>
-      <div style={{ maxWidth: '600px', width: '100%', background: '#111827', border: '1px solid #1f2937', borderRadius: '16px', padding: '32px' }}>
-        <h1 style={{ margin: 0, fontSize: '1.6rem', fontWeight: 800, color: '#10b981' }}>⚡ Full-Stack Test App</h1>
-        <p style={{ color: '#9ca3af', fontSize: '0.85rem' }}>React Frontend + Express Backend API</p>
-        <div style={{ margin: '12px 0', fontSize: '0.75rem', padding: '6px 12px', background: '#1f2937', color: '#10b981', borderRadius: '20px', display: 'inline-block' }}>{status}</div>
-        <form onSubmit={handleAdd} style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
-          <input type="text" placeholder="Add task..." value={newItem} onChange={e => setNewItem(e.target.value)} style={{ flex: 1, background: '#1f2937', border: '1px solid #374151', borderRadius: '8px', padding: '10px 14px', color: '#fff' }} />
-          <button type="submit" style={{ background: '#10b981', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 16px', fontWeight: 700 }}>+ Add</button>
-        </form>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-          {items.map(item => (
-            <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', background: '#1f2937', padding: '12px 16px', borderRadius: '8px' }}>
-              <span>{item.text}</span>
-              <span style={{ color: item.completed ? '#34d399' : '#9ca3af', fontSize: '0.8rem' }}>{item.completed ? 'Done' : 'Pending'}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}`);
-          onFileUpload('server.js', `const express = require('express');\nconst cors = require('cors');\nconst app = express();\napp.use(cors());\napp.use(express.json());\n\nlet todos = [\n  { id: 1, text: 'Build React Frontend', completed: true },\n  { id: 2, text: 'Deploy Express Backend API', completed: true },\n  { id: 3, text: 'Test Full-Stack Deployment on Vercel', completed: false }\n];\n\napp.get('/api/todos', (req, res) => res.json({ success: true, items: todos }));\napp.post('/api/todos', (req, res) => {\n  const item = { id: Date.now(), text: req.body.text, completed: false };\n  todos.push(item);\n  res.json({ success: true, item });\n});\n\nmodule.exports = app;`);
-          onFileUpload('vercel.json', `{\n  "version": 2,\n  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/index.js" }]\n}`);
+          onAddFile('App.jsx');
         }}
         style={{
-          marginTop: '10px', width: '100%', background: 'linear-gradient(135deg, #10b981, #059669)',
-          color: '#fff', border: 'none', borderRadius: '6px', padding: '8px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer'
+          marginTop: '10px', width: '100%', background: 'var(--panel-elevated)',
+          color: 'var(--text-main)', border: '1px solid var(--panel-border)', borderRadius: '6px', padding: '8px', fontSize: '12px', fontWeight: 'bold', cursor: 'pointer'
         }}
       >
-        🧪 Load Full-Stack Demo App
+        ➕ Create App.jsx
       </button>
     </div>
   );
@@ -251,7 +193,15 @@ const IntentToApp = ({ onAppGenerated, generatedFiles, dbConfig, projectName, se
         if (!mainCode) { alert('No code found to enhance. Please build an app first!'); return; }
 
         const enhancedCode = await refineAppCode(mainCode, finalInput, finalProjectName, targetFile, activeDbConfig, generatedFiles);
-        code = { ...generatedFiles, ...enhancedCode };
+        const updatedFiles = { ...generatedFiles };
+        if (targetFile.match(/\.(py|txt|md|html)$/)) {
+           delete updatedFiles[targetFile];
+           const newTargetFile = targetFile.replace(/\.[^/.]+$/, "") + ".jsx";
+           updatedFiles[newTargetFile] = enhancedCode[targetFile] || enhancedCode[newTargetFile];
+        } else {
+           Object.assign(updatedFiles, enhancedCode);
+        }
+        code = updatedFiles;
       } else {
         const newCode = await generateAppFromVoice(finalInput, finalProjectName, activeDbConfig, stylingPreference);
         code = { ...(generatedFiles || {}), ...newCode };
@@ -468,44 +418,40 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
 
       <div className="sidebar-section">
         <h3>WORKSPACE MEMBERS</h3>
-        {loadingMembers ? (
-          <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Loading members...</div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-            {workspaceMembers.map(m => (
-              <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: '8px', borderRadius: '6px' }}>
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{m.name} {m.email === identity?.email && '(You)'}</div>
-                  <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>{m.email}</div>
-                </div>
-                {isOwner && m.email !== identity?.email ? (
-                  <select 
-                    className="ide-input" 
-                    style={{ width: 'auto', padding: '4px', marginBottom: 0, fontSize: '0.75rem' }}
-                    value={m.role} 
-                    onChange={e => handleRoleChange(m.id, e.target.value)}
-                  >
-                    <option value="member">Member</option>
-                    <option value="admin">Admin</option>
-                    <option value="owner">Owner</option>
-                  </select>
-                ) : (
-                  <div style={{ fontSize: '0.7rem', background: 'var(--glass-bg)', padding: '2px 6px', borderRadius: '4px', textTransform: 'capitalize' }}>
-                    {m.role}
-                  </div>
-                )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+          {workspaceMembers.map(m => (
+            <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--glass-bg)', padding: '8px', borderRadius: '6px' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>{m.name} {m.email === identity?.email && '(You)'}</div>
+                <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>{m.email}</div>
               </div>
-            ))}
-            {workspaceMembers.length === 0 && (
-              <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Only you are in this workspace.</div>
-            )}
-          </div>
-        )}
+              {isOwner && m.email !== identity?.email ? (
+                <select 
+                  className="ide-input" 
+                  style={{ width: 'auto', padding: '4px', marginBottom: 0, fontSize: '0.75rem' }}
+                  value={m.role || 'member'} 
+                  onChange={e => handleRoleChange(m.id, e.target.value)}
+                >
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+              ) : (
+                <div style={{ fontSize: '0.7rem', background: 'var(--glass-bg)', padding: '2px 6px', borderRadius: '4px', textTransform: 'capitalize' }}>
+                  {m.role || 'Member'}
+                </div>
+              )}
+            </div>
+          ))}
+          {workspaceMembers.length === 0 && (
+            <div style={{ fontSize: '0.8rem', opacity: 0.6 }}>Only you are in this workspace.</div>
+          )}
+        </div>
       </div>
 
       <div className="sidebar-section">
         <h3>THEME</h3>
-        <select className="ide-input" value={currentTheme} onChange={(e) => setTheme(e.target.value)}>
+        <select className="ide-input" value={currentTheme || 'antigravity'} onChange={(e) => setTheme(e.target.value)}>
           <option value="antigravity">Antigravity Dark</option>
           <option value="classic">VS Code Classic</option>
           <option value="light">Light Mode</option>
@@ -514,7 +460,7 @@ const SettingsPanel = ({ currentTheme, setTheme, identity, onLogout, workspaceId
       
       <div className="sidebar-section">
         <h3>STYLING FRAMEWORK</h3>
-        <select className="ide-input" value={stylingPreference} onChange={(e) => {
+        <select className="ide-input" value={stylingPreference || 'styled-components'} onChange={(e) => {
           setStylingPreference(e.target.value);
           localStorage.setItem('spark_styling_pref', e.target.value);
         }}>
@@ -1663,6 +1609,7 @@ function App() {
               body: JSON.stringify({ files: newFiles })
             });
           }
+          broadcastCodeGenerated(workspaceId, newFiles);
         } catch (e) {
           console.error('Failed to update DB on file delete', e);
         }
@@ -1713,12 +1660,6 @@ function App() {
         {dbStatus === 'active' && dbConfig && (
           <div style={{ background: 'var(--panel-bg)', padding: '10px', borderRadius: '6px', border: '1px solid var(--panel-border)' }}>
             <div style={{ color: '#22c55e', fontSize: '0.75rem', fontWeight: 'bold', marginBottom: '4px' }}>● Supabase Database Active</div>
-            <div style={{ fontSize: '0.7rem', opacity: 0.7, wordBreak: 'break-all', marginBottom: '4px' }}>
-              URL: <code>{dbConfig.url}</code>
-            </div>
-            <div style={{ fontSize: '0.7rem', opacity: 0.7 }}>
-              Table: <code>{dbConfig.table}</code>
-            </div>
             <div style={{ fontSize: '0.65rem', color: '#6366f1', marginTop: '6px', fontWeight: 600 }}>
               ✓ Real-time sync enabled for workspace
             </div>
