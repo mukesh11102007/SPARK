@@ -674,7 +674,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       return (
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)' }}>Project Templates</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)' }}>Project Templates</h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Start with a template</p>
           </div>
           
@@ -723,7 +723,14 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
                     style={{ display: 'flex', padding: '20px', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)', gap: '16px', cursor: 'pointer' }} 
                     onClick={() => setSelectedTemplate(t)}
                   >
-                     <div style={{ width: 48, height: 48, borderRadius: '8px', background: 'linear-gradient(135deg, #3B82F6, #2563EB)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem' }}>{t.icon}</div>
+                     <div style={{ 
+                        width: 48, height: 48, borderRadius: '8px', 
+                        background: 'var(--glass-bg)', 
+                        border: '1px solid var(--panel-border)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-main)' 
+                      }}>
+                        <LayoutTemplate size={24} strokeWidth={1.5} />
+                      </div>
                      <div style={{ flex: 1 }}>
                        <h3 style={{ margin: '0 0 4px', fontSize: '1rem', color: 'var(--text-main)' }}>{t.title}</h3>
                        <p style={{ margin: '0 0 12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{t.desc}</p>
@@ -742,12 +749,14 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       return (
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}> Deployment</h1>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)' }}>Deployment</h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Deploy your app in one click</p>
           </div>
 
           <div style={{ background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)', padding: '24px', marginBottom: '32px', display: 'flex', gap: '24px' }}>
-            <div style={{ width: '180px', height: '120px', background: 'var(--panel-elevated)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}></div>
+            <div style={{ width: '180px', height: '120px', background: 'var(--glass-bg)', border: '1px solid var(--panel-border)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+              <Rocket size={48} strokeWidth={1.5} />
+            </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1, paddingRight: '24px' }}>
@@ -775,8 +784,10 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
               />
             </div>
           ) : (
-            <div style={{ padding: '40px', textAlign: 'center', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px dashed var(--panel-border)', color: 'var(--text-muted)' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '16px' }}></div>
+            <div style={{ padding: '40px', textAlign: 'center', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px dashed var(--panel-border)', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ marginBottom: '16px', color: 'var(--text-muted)' }}>
+                <Rocket size={48} strokeWidth={1.5} />
+              </div>
               <div>Select a workspace above to manage its deployments.</div>
             </div>
           )}
@@ -820,8 +831,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '32px' }}>
             <div>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'linear-gradient(135deg, #3B82F6, #1E40AF)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}></div>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)' }}>
                 {teamWorkspaceName}
               </h1>
               <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Collaborate with your team</p>
@@ -1095,8 +1105,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#0a0a0f', padding: '40px', overflowY: 'auto' }}>
           <div style={{ maxWidth: '1000px', width: '100%', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '8px' }}>
-              <div style={{ width: 40, height: 40, borderRadius: '8px', background: 'linear-gradient(135deg, #4D3DF7, #7B1FA2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' }}></div>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 600, color: '#fff', margin: 0 }}>AI Builder</h1>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>AI Builder</h1>
             </div>
             <p style={{ color: '#a1a1aa', fontSize: '1rem', margin: '0 0 40px 56px' }}>Describe your idea and let AI build it for you</p>
             
@@ -1157,9 +1166,8 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
           {/* Header */}
           <div style={{ height: '60px', borderBottom: '1px solid #27272a', display: 'flex', alignItems: 'center', padding: '0 24px', justifyContent: 'space-between', background: '#13131a' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '6px', background: 'linear-gradient(135deg, #00C48C, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}></div>
-              <h1 style={{ fontSize: '1.2rem', fontWeight: 600, color: '#fff', margin: 0 }}>Canvas</h1>
-              <span style={{ color: '#a1a1aa', fontSize: '0.85rem', marginLeft: '8px' }}>Drag components and build visually</span>
+              <h1 style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-main)', margin: 0 }}>Canvas</h1>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginLeft: '8px' }}>Drag components and build visually</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <button 
@@ -1262,8 +1270,7 @@ export const Dashboard = ({ identity, setIdentity, onOpenWorkspace, theme, setTh
       return (
         <div style={{ flex: 1, overflowY: 'auto', padding: '24px 60px 60px' }}>
           <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '1.8rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}></div>
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: '0 0 8px 0', color: 'var(--text-main)' }}>
               Your Workspaces
             </h1>
             <p style={{ color: 'var(--text-muted)', margin: 0, fontSize: '0.9rem' }}>Manage all your personal and team projects</p>
